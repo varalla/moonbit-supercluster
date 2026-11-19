@@ -1,5 +1,7 @@
 # moonbit-supercluster
 
+English | [简体中文](README_zh.md)
+
 A pure [MoonBit](https://www.moonbitlang.com/) port of
 [mapbox/supercluster](https://github.com/mapbox/supercluster) — a very fast
 geospatial point clustering library for browsers (WebGIS) — including an
