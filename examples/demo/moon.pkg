@@ -1,0 +1,7 @@
+import {
+  "moonbitgis/supercluster/src" @sc,
+}
+
+options(
+  "is-main": true,
+)

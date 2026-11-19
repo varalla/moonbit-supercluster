@@ -1,0 +1,202 @@
+# moonbit-supercluster
+
+A pure [MoonBit](https://www.moonbitlang.com/) port of
+[mapbox/supercluster](https://github.com/mapbox/supercluster) — a very fast
+geospatial point clustering library for browsers (WebGIS) — including an
+embedded port of [mourner/kdbush](https://github.com/mourner/kdbush), the
+static KD-tree it is built on.
+
+Runs on the MoonBit **JS backend** (Node.js / browsers) and is ready for the
+Wasm backend, making it a natural fit for MoonBit-based WebGIS stacks.
+
+```
+moon test --target js
+# Total tests: 17, passed: 17, failed: 0.
+```
+
+## Why it's fast
+
+Given a large set of points on a map, `supercluster` builds a hierarchy of
+zoom-level KD-trees once at `load()` time, so every later query is just an
+iterative DFS traversal over flat integer arrays:
+
+- **Int32-encoded spherical Mercator coordinates** (scale `2^30`) keep the
+  hot path in integer arithmetic, exactly like the reference implementation.
+- **Floyd–Rivest selection** partitions the KD-tree without a full sort.
+- **Flat record slab** (`Int` FixedArray, one record per point/cluster) — no
+  per-point objects in the clustering pass.
+- **Dateline-aware bbox queries** split crossing boxes into two hemisphere
+  queries, matching upstream behavior including degenerate bbox values.
+
+## Installation
+
+```
+moon add moonbitgis/supercluster
+```
+
+Then import it in your package config:
+
+```
+import {
+  "moonbitgis/supercluster/src" @sc,
+}
+```
+
+## Quick start
+
+```moonbit
+// 1. parse a GeoJSON FeatureCollection (Point / MultiPoint features)
+let points = @sc.parse_geojson_points(geojson_string)
+
+// 2. build the index
+let index = @sc.Supercluster::new(@sc.Options::new(
+  min_points=3,
+  radius=60.0,
+)).load(points)
+
+// 3. query clusters for a bbox [min_lng, min_lat, max_lng, max_lat] at a zoom
+let clusters = index.get_clusters(-180.0, -85.0, 180.0, 85.0, 3)
+for c in clusters {
+  println("cluster \{c.cluster_id}: \{c.point_count} points at (\{c.lng}, \{c.lat})")
+}
+```
+
+A runnable demo (2000 synthetic points, per-zoom cluster counts, biggest
+cluster expansion, tile query) lives in `examples/demo`:
+
+```
+moon run examples/demo --target js
+```
+
+## API
+
+| API | Description |
+| --- | --- |
+| `Supercluster::new(options)` | create an index with options |
+| `load(points)` | build the zoom hierarchy of KD-trees (call once) |
+| `get_clusters(min_lng, min_lat, max_lng, max_lat, zoom)` | bbox query, dateline-aware |
+| `get_children(cluster_id)` | immediate descendants of a cluster |
+| `get_leaves(cluster_id, limit, offset)` | original points under a cluster |
+| `get_cluster_expansion_zoom(cluster_id)` | zoom at which the cluster expands |
+| `get_tile(x, y, z)` | vector-tile-style point features for one tile |
+| `parse_geojson_points(json)` | GeoJSON adapter: FeatureCollection → `Array[InputPoint]` |
+
+Query results are `Feature` values with `lng`, `lat`, `is_cluster`,
+`cluster_id`, `point_count` and `properties`; tile results are `TileFeature`
+values with pixel-space `x`, `y`, `tags` and feature `id`.
+
+### Options
+
+All options match the upstream defaults and semantics:
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `min_zoom` | `0` | min zoom at which clusters are generated |
+| `max_zoom` | `16` | max zoom at which clusters are generated |
+| `min_points` | `2` | minimum points to form a cluster |
+| `radius` | `40.0` | cluster radius in pixels (`extent`-normalized) |
+| `extent` | `512.0` | tile extent (tiles are `extent × extent` px) |
+| `node_size` | `64` | KD-tree node size; affects query performance |
+| `generate_id` | `false` | generate monotonically increasing cluster ids |
+| `map` | identity | derive per-point properties before aggregation |
+| `reduce` | `None` | `Some(fn(acc, props))` — aggregate child properties into clusters |
+
+Example with property aggregation — `map` extracts the fields to aggregate
+from each point, `reduce` folds a child into the cluster's running sum:
+
+```moonbit
+// map: {mag: 4.2} -> {sum: 4.2}
+fn map_mag(props : Json) -> Json {
+  match props {
+    Object(m) =>
+      match m.get("mag") {
+        Some(Number(d, ..)) => Json::object([("sum", Json::number(d))])
+        _ => Json::object([("sum", Json::number(0.0))])
+      }
+    _ => Json::object([("sum", Json::number(0.0))])
+  }
+}
+
+// reduce: sum += child sum
+fn reduce_sum(acc : Json, props : Json) -> Unit {
+  match (acc, props) {
+    (Object(a), Object(p)) => {
+      let old = match a.get("sum") {
+        Some(Number(d, ..)) => d
+        _ => 0.0
+      }
+      let add = match p.get("sum") {
+        Some(Number(d, ..)) => d
+        _ => 0.0
+      }
+      a.set("sum", Json::number(old + add))
+    }
+    _ => ()
+  }
+}
+
+let index = @sc.Supercluster::new(
+  @sc.Options::new(map=map_mag, reduce=Some(reduce_sum)),
+).load(points)
+```
+
+### Error handling
+
+Fallible functions raise typed errors you can match on:
+
+```moonbit
+let children = try index.get_children(164) catch {
+  ClusterError(msg) => { /* "No cluster with the specified id." */ }
+}
+let points = try @sc.parse_geojson_points(s) catch {
+  GeoJSONError(msg) => { /* invalid JSON / unsupported geometry ... */ }
+}
+```
+
+## Behavior parity notes
+
+This port aims for **bit-for-bit behavioral parity** with the JS original,
+including its edge-case quirks:
+
+- JS `Math.round` semantics (round half up) via a local `js_round`.
+- JS `Number::toString` formatting for abbreviated counts (`point_count_abbreviated`).
+- Features without geometry keep an index slot so point ids stay aligned with
+  the input, exactly like upstream `numPoints` counting.
+- With `reduce` unset (`stride = 6`), the upstream implementation reads the
+  property slot out of bounds, which JS silently treats as `undefined`;
+  the port reproduces the same visible behavior with an explicit bounds check.
+
+## Tests
+
+17 tests, most of them **parity tests against the reference implementation**:
+expected values (cluster ids, point counts, tile coordinates, expansion zooms)
+are taken verbatim from the upstream `test/test.js` suite and its
+`places.json` fixture, embedded in `src/places_fixture_test.mbt`.
+
+```
+moon test --target js
+# Total tests: 17, passed: 17, failed: 0.
+```
+
+## Project layout
+
+```
+src/
+  geo.mbt                  Mercator projection helpers (lngX/latY/xLng/yLat)
+  kdbush.mbt               Static KD-tree: flat Int arrays + Floyd–Rivest select
+  supercluster.mbt         Core: zoom hierarchy, clustering, queries, tiles
+  geojson.mbt              GeoJSON Point/MultiPoint input adapter
+  places_fixture_test.mbt  Embedded upstream fixtures (parity tests)
+  supercluster_test.mbt    17 tests incl. parity assertions
+examples/demo/             Runnable demo
+```
+
+## License
+
+BSD-2-Clause — this is a derivative work of:
+
+- [mapbox/supercluster](https://github.com/mapbox/supercluster)
+  © Volodymyr Agafonkin, Mapbox
+- [mourner/kdbush](https://github.com/mourner/kdbush) © Volodymyr Agafonkin
+
+See [LICENSE](LICENSE). Upstream fixtures used in tests carry the same license.
