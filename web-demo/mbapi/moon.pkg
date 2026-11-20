@@ -1,0 +1,8 @@
+import {
+  "moonbitgis/supercluster/src" @sc,
+}
+
+options(
+  "is-main": true,
+  link: { "js": { "exports": [ "sc_version", "sc_build_index", "sc_clusters" ] } },
+)
