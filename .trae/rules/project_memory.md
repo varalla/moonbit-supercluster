@@ -81,6 +81,26 @@ examples/demo/             可运行示例（2000 合成点）
 - 真正完成时的标记动作清单：README 状态行改 ✅ → 打 tag（附注测试结果）→ 建 Release → `moon publish` 到 mooncakes.io → 录 demo 视频/截图
 - 当前阶段只推代码与文档，不做任何"完成"性质的对外标记
 
+## Demo 材料清单（标记立项/评审阶段，2026-11-20）
+
+**【立项】报名初立项阶段需先准备（当前全部就绪，只差填表单）：**
+
+1. ✅ 可运行代码仓库（gitee+GitHub 双仓库，需确认 GitHub 仓库为 public）
+2. ✅ 项目简介文案（一句话+亮点，README 开头可直接复用：纯 MoonBit 移植 mapbox/supercluster 含 kdbush；17/17 对拍全绿；扁平整数数组；JS/Wasm 双后端）
+3. ✅ 可复现验证命令（`moon test --target js` / `moon run examples/demo --target js`）
+4. ⚠️ demo 运行演示——立项只需基础版（examples/demo 控制台输出够用）
+5. ⚠️ 报名表基础字段（项目名/团队联系方式/仓库链接/立项编号）——待填
+
+**【评审】作品提交/评审阶段再补：**
+
+6. ⚠️ 对拍验证证据截图（`moon test` 输出 "Total tests: 17, passed: 17"，5 分钟可补）
+7. ❌ 演示视频（1–5 分钟：介绍→测试全绿→demo→地图效果；Win+G 或 OBS 录制）
+8. ❌ 效果截图/GIF（2–3 张：测试输出、demo 输出、地图渲染）
+9. ❌ mooncakes.io 发布（可选硬证据，需注册 moonbitgis 账号后 `moon publish`；注意与"未完成"口径的关系）
+10. ❌ 在线地图体验页（可选加分项：JS 后端编译产物 + Leaflet 真实地图聚合页；建议优先做，可同时产出 #4 增强版/#6/#7/#8 的素材）
+
+**最小补齐路径**：必做 = #6 截图 + #7 录屏（跑一遍测试+demo 后一次性录完）；可选加分优先 #10 在线地图页（一举三得）。
+
 ## 待办 / 后续方向
 
 - [ ] mooncakes.io 发布（`moon publish`，需注册 moonbitgis 账号）
