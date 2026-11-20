@@ -32,6 +32,34 @@ GeoJSON 字符串
 2. **整数化热路径**：坐标编码为 Int32（scale 2³⁰），聚类与查询全程整数运算，与 JS 原版的 SMI 快路径对齐。
 3. **扁平数据槽**：所有点/簇记录存进一个 `FixedArray[Int]`，每条记录 `stride` 个字段，无逐点对象，缓存友好。
 
+### 1.1 索引语义澄清（FAQ）
+
+**Q1：索引是建立在 0–1 墨卡托上的吗？**
+
+是。所有经纬度先经 [lng_x / lat_y](../src/geo.mbt#L7-L22) 映射到 Web 墨卡托的 **`[0, 1]`** 区间（y 向南单调递增、纬度在极点截断），随后编码为 Int32：
+
+```
+encode(c) = ((c - 0.5) * 2^30).to_int()   // supercluster.mbt L155
+```
+
+之后 KD-tree 的排序、bbox `range` 查询全部在这批 Int32 上进行，浮点数只出现在输入/输出边界。
+
+**Q2：是"只读局部数据、拉近时再读"吗？**
+
+一半对：
+
+- **查询是按需的**：`get_clusters(bbox, zoom)` / `get_tile(z,x,y)` 只对对应 zoom 层的树做 range 查询，**返回**视口内的那一小部分簇/点；拉近后簇经 `get_children` 展开为子簇乃至单点，观感上像"加载更多"。
+- **建索引是全量的**：`load(points)` 一次性把全部点投影编码，自 maxZoom 向下逐层聚合，**预建 0..maxZoom+1 共 maxZoom+2 棵 KD-tree**。地图拉近拉远只是换一个 zoom 参数去查内存里已有的另一棵树——没有任何重新读取或重建。原始数据必须全部驻留内存，本库不做磁盘 IO、不做惰性加载。
+
+**Q3：只建了坐标索引，无法按名称等其他字段查询吗？**
+
+对。KDBush 只索引 `(x, y)` 两个 Int32 通道，KD 排序也只按坐标。名称等属性的处理方式是：
+
+- 每个原始点的 properties 存在 `props[]` 数组，按点号 `OFFSET_ID` 对齐（[load 时写入](../src/supercluster.mbt#L238)）；
+- 输出 feature 时按点号回查并附带（[feature_json](../src/supercluster.mbt#L651-L652)）；簇属性靠用户提供的 `map`/`reduce` 在建索引时聚合（见 5.7）。
+
+因此"按名称找点"在本库（及上游 mapbox/supercluster）中均不支持——只能线性扫描 `props` 数组，或在应用层自建名称 → 点号的二级索引。
+
 ## 2. 目录结构
 
 ```

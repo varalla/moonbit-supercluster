@@ -16,6 +16,8 @@ moon test --target js
 # Total tests: 17, passed: 17, failed: 0.
 ```
 
+> **Status**: ✅ complete — all 17 parity tests pass, demo runs, ready for review.
+
 ## Why it's fast
 
 Given a large set of points on a map, `supercluster` builds a hierarchy of
@@ -29,6 +31,34 @@ iterative DFS traversal over flat integer arrays:
   per-point objects in the clustering pass.
 - **Dateline-aware bbox queries** split crossing boxes into two hemisphere
   queries, matching upstream behavior including degenerate bbox values.
+
+## How indexing works
+
+Three key semantics to know before using the library:
+
+1. **The index lives in [0,1] spherical Mercator.** All lng/lat pairs are
+   projected to the Web Mercator `[0, 1]` range (y grows southward, latitudes
+   are clamped at the poles), then encoded as Int32
+   (`encode(c) = (c - 0.5) × 2³⁰`). KD-tree partitioning and bbox queries run
+   entirely in integer arithmetic; floats only appear at the I/O boundary.
+2. **Index building is eager; queries are on-demand.** `load(points)` loads
+   every point once and clusters top-down from `max_zoom`, pre-building
+   `max_zoom + 2` KD-trees (one per zoom level). Panning and zooming a map
+   just queries a different in-memory tree with a different zoom parameter —
+   `get_clusters` / `get_tile` only **return** the small subset inside the
+   viewport; nothing is re-read or rebuilt. All data must stay resident in
+   memory: no disk I/O, no lazy loading.
+3. **Only coordinates are indexed; properties are not.** The KD-tree indexes
+   just the `(x, y)` channels. Properties such as names live in a parallel
+   `props[]` array aligned by point index and are attached when features are
+   emitted; cluster properties are aggregated via `map`/`reduce` at load
+   time. **Searching points by name or any other field is not supported** —
+   either scan the `props` array linearly or build your own name → index map
+   in the application layer.
+
+For implementation details (record slab layout, cluster_id bit packing, the
+per-zoom clustering algorithm, parity testing), see
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Installation
 
