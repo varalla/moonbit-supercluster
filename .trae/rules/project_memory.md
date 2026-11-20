@@ -5,10 +5,10 @@
 ## 项目概述
 
 - **定位**：MoonBit 黑客松 2026 参赛项目——纯 MoonBit 移植 [mapbox/supercluster](https://github.com/mapbox/supercluster)（含内嵌 [mourner/kdbush](https://github.com/mourner/kdbush)），海量地图点聚合库。mooncakes.io 无同类实现（已实测检索）。
-- **仓库**：https://gitee.com/YWNdesign/moonbit-supercluster （master 分支）
+- **仓库**：双仓库——gitee `https://gitee.com/YWNdesign/moonbit-supercluster`（origin，主仓库）+ GitHub 镜像 `https://github.com/varalla/moonbit-supercluster`（remote 名 `github`）。**注意：本地 master 已跟踪 github/master**，默认 push 会去 GitHub，推 gitee 需显式 `git push origin master`。
 - **本地路径**：`C:\Users\Admin\Desktop\前端项目\moonbit-supercluster`
 - **模块名**：`moonbitgis/supercluster`，版本 0.1.0，License BSD-2-Clause（与上游一致，注明衍生作品归属）
-- **状态**：✅ 完成——17/17 测试全绿（对拍原版套件），demo 可运行，双语 README 已推送。
+- **状态**：🚧 **开发中（对外口径）**——技术上 17/17 测试全绿（对拍原版套件）、demo 可运行、双语 README 已推送，但**作品尚未完成，只是可运行 demo**。README 状态行写「🚧 开发中」，任何对外材料不得声称已完成；曾按"已完成"打过 `v0.1.0` tag 后按用户要求撤回（本地+双远程已删），真完成前勿再打 release tag。
 
 ## 构建与验证命令
 
@@ -67,7 +67,19 @@ examples/demo/             可运行示例（2000 合成点）
 
 - 对拍期望值改动必须同步跑原版 JS（此前用 %TEMP% 下 sc_index.js + sc_places*.json 生成 fixture）
 - 测试失败消息通过 `expect_true` 内嵌 println("ASSERT FAIL: ...") 输出（Debug 不打印负载）
-- git push 目标：gitee master；commit 风格参考 `becd611`（Initial release）与 `d4514f8`（bilingual README）
+- git push：**默认只推 gitee**（`git push origin master`）；GitHub 镜像按用户指示单独推。GitHub 连接不稳（Connection reset/超时常见），失败直接重试一次即可
+- commit 消息：用户要求"不做明确备注"时用模糊风格 `chore: misc config`（参考 9258c4b/aea574b）；正式功能提交用描述性英文标题（参考 becd611/d4514f8/78fef69）
+
+## 文档体系（2026-11-20 新增）
+
+- `docs/ARCHITECTURE.md`：逐文件实现详解；§1.1「索引语义澄清 FAQ」——(1) 索引建在 [0,1] 墨卡托 + Int32 编码上；(2) load() 全量预建 maxZoom+2 棵树、查询按需（无磁盘 IO/惰性加载，拉近=查内存里更高 zoom 的树）；(3) 仅坐标索引，属性存平行数组 props[] 按点号附带，按名称检索不支持
+- README/README_zh：新增「索引原理 / How indexing works」节（FAQ 精简版）+ 顶部状态行（🚧 开发中）
+
+## 黑客松提交流程要点（2026-11-20 对话）
+
+- 组委会不会主动看仓库 → 必须通过原报名渠道（表单/群/Issue）主动回复「已完成」+ 仓库链接 + 成果一句话 + 演示方式
+- 真正完成时的标记动作清单：README 状态行改 ✅ → 打 tag（附注测试结果）→ 建 Release → `moon publish` 到 mooncakes.io → 录 demo 视频/截图
+- 当前阶段只推代码与文档，不做任何"完成"性质的对外标记
 
 ## 待办 / 后续方向
 
