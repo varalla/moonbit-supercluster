@@ -16,7 +16,7 @@ moon test --target js
 # Total tests: 17, passed: 17, failed: 0.
 ```
 
-> **Status**: ✅ complete — all 17 parity tests pass, demo runs, ready for review.
+> **Status**: 🚧 in development — currently a runnable demo (17/17 parity tests pass), the work is not finished yet.
 
 ## Why it's fast
 
