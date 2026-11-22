@@ -17,6 +17,8 @@
 ```
 moon test --target js          # 17/17 全绿
 moon run examples/demo --target js
+moon build --target js web-demo/mbapi   # 构建 web-demo 绑定产物 → target/js/release/build/web-demo/mbapi/mbapi.js（覆盖 web-demo/mbapi.js）
+node web-demo/tools/serve.js            # 在线演示 http://localhost:8787
 ```
 
 moon CLI 不在 PATH，需全路径调用：`& "$env:USERPROFILE\.moon\bin\moon.exe" <cmd>`，且必须在项目目录运行（cwd 带上）。
@@ -32,6 +34,12 @@ src/
   places_fixture_test.mbt  上游 places.json fixture（#| 行字符串嵌入，114KB）
   supercluster_test.mbt    17 个测试，期望值逐字取自原版 test/test.js
 examples/demo/             可运行示例（2000 合成点）
+web-demo/                  浏览器在线演示（Leaflet + 广东六城 10 万点，详见 docs/ARCHITECTURE.md §7）
+  mbapi/main.mbt           MoonBit 包装包：link.js.exports 导出 sc_version/sc_build_index/sc_clusters
+  mbapi.js                 入库的 moon build JS 产物（改动 main.mbt 后需重建覆盖）
+  app.js / index.html      地图页：__SC_* 胶水（必须先于动态 import 设置）+ 分档渲染 + 统计面板
+  data/gd_points.json      10 万合成点（tools/gen_data.js 生成）
+  tools/                   gen_data.js（造数据）/ serve.js（静态服务器，端口 8787，须 HTTP 访问）
 ```
 
 ## 对拍对齐的关键语义（改代码前必读）
@@ -72,8 +80,8 @@ examples/demo/             可运行示例（2000 合成点）
 
 ## 文档体系（2026-11-20 新增）
 
-- `docs/ARCHITECTURE.md`：逐文件实现详解；§1.1「索引语义澄清 FAQ」——(1) 索引建在 [0,1] 墨卡托 + Int32 编码上；(2) load() 全量预建 maxZoom+2 棵树、查询按需（无磁盘 IO/惰性加载，拉近=查内存里更高 zoom 的树）；(3) 仅坐标索引，属性存平行数组 props[] 按点号附带，按名称检索不支持
-- README/README_zh：新增「索引原理 / How indexing works」节（FAQ 精简版）+ 顶部状态行（🚧 开发中）
+- `docs/ARCHITECTURE.md`：逐文件实现详解；§1.1「索引语义澄清 FAQ」——(1) 索引建在 [0,1] 墨卡托 + Int32 编码上；(2) load() 全量预建 maxZoom+2 棵树、查询按需（无磁盘 IO/惰性加载，拉近=查内存里更高 zoom 的树）；(3) 仅坐标索引，属性存平行数组 props[] 按点号附带，按名称检索不支持；§7「web-demo 浏览器端绑定」——数据流（Float64Array 平铺 + extern "js" 逐点访问器）、link.js.exports 导出机制、胶水函数必须先于动态 import 设置、产物入库策略
+- README/README_zh：新增「索引原理 / How indexing works」节（FAQ 精简版）+「浏览器在线演示 / Browser demo」节（web-demo 运行方式与绑定说明）+ 顶部状态行（🚧 开发中）
 
 ## 黑客松提交流程要点（2026-11-20 对话）
 
@@ -97,9 +105,9 @@ examples/demo/             可运行示例（2000 合成点）
 7. ❌ 演示视频（1–5 分钟：介绍→测试全绿→demo→地图效果；Win+G 或 OBS 录制）
 8. ❌ 效果截图/GIF（2–3 张：测试输出、demo 输出、地图渲染）
 9. ❌ mooncakes.io 发布（可选硬证据，需注册 moonbitgis 账号后 `moon publish`；注意与"未完成"口径的关系）
-10. ❌ 在线地图体验页（可选加分项：JS 后端编译产物 + Leaflet 真实地图聚合页；建议优先做，可同时产出 #4 增强版/#6/#7/#8 的素材）
+10. ✅ 在线地图体验页（web-demo：Leaflet 真实地图 + 广东 10 万点聚合，一举三得——同时产出 #4 增强版/#6/#8 的素材；演示录屏 #7 仍需录制）
 
-**最小补齐路径**：必做 = #6 截图 + #7 录屏（跑一遍测试+demo 后一次性录完）；可选加分优先 #10 在线地图页（一举三得）。
+**最小补齐路径**：必做 = #6 截图 + #7 录屏（跑一遍测试+demo+web-demo 后一次性录完；web-demo 素材已有，见 #10）。
 
 ## 待办 / 后续方向
 

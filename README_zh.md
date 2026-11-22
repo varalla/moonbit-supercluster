@@ -92,6 +92,37 @@ for c in clusters {
 moon run examples/demo --target js
 ```
 
+## 浏览器在线演示
+
+[`web-demo/`](web-demo/) 是一个纯静态站点：Leaflet 地图 + MoonBit JS 后端
+编译产物，对广东省六城市（广州、深圳、东莞、佛山、中山、珠海）的
+**10 万合成点**做真实地图聚合：
+
+```
+cd web-demo
+node tools/gen_data.js     # 重新生成 data/gd_points.json（可选，已入库）
+node tools/serve.js        # 在 http://localhost:8787 提供服务
+```
+
+浏览器打开 <http://localhost:8787> —— 页面必须经 HTTP 访问（不能直接以
+`file://` 打开），因为它需要 fetch 数据并使用 ES module。
+
+工作方式：
+
+- [`web-demo/mbapi/main.mbt`](web-demo/mbapi/main.mbt) 包装本库，通过
+  MoonBit `link.js.exports` 机制向 JS 暴露三个函数：`sc_version`、
+  `sc_build_index`（用 JS 侧提供的数据组装 `InputPoint` 并执行 `load()`）
+  与 `sc_clusters`（bbox 查询，返回紧凑 JSON 字符串）。
+- 数据以扁平 `Float64Array`（`[lng, lat, cityIdx] × n`）跨越边界，配合三个
+  访问器胶水函数（`__SC_LNG` / `__SC_LAT` / `__SC_CITY`）由 MoonBit 侧
+  `extern "js"` 逐点读取——避免把 10 万点塞进 JSON 解析器的开销。
+- [`app.js`](web-demo/app.js) 把簇渲染为分档着色/分级的圆形标记（原版
+  supercluster 风格），单点渲染为小圆点，并实时显示统计面板：索引构建
+  耗时、视野内要素数（簇/单点）、最大簇与最近查询耗时。
+- [`web-demo/mbapi.js`](web-demo/mbapi.js) 是入库的 MoonBit 编译产物；
+  改动 `main.mbt` 后用 `moon build --target js web-demo/mbapi` 重新构建，
+  并将 `target/js/release/build/web-demo/mbapi/mbapi.js` 覆盖过来。
+
 ## API
 
 | API | 说明 |
@@ -209,7 +240,13 @@ src/
   geojson.mbt              GeoJSON Point/MultiPoint 输入适配器
   places_fixture_test.mbt  嵌入的上游 fixture（对拍测试）
   supercluster_test.mbt    17 个测试，含对拍断言
-examples/demo/             可运行示例
+examples/demo/             可运行控制台示例（2000 合成点）
+web-demo/                  浏览器在线演示：Leaflet 地图 + 10 万点聚合，
+                           含 JS 后端编译产物（mbapi.js）
+  mbapi/                   MoonBit 包装包（link.js.exports）
+  app.js / index.html      地图页：胶水、渲染、统计面板
+  data/gd_points.json      合成数据集（重新生成：tools/gen_data.js）
+  tools/serve.js           极简静态服务器（端口 8787）
 ```
 
 ## 许可证

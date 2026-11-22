@@ -67,6 +67,7 @@ moonbit-supercluster/
 ├── moon.mod                    模块定义（TOML）：moonbitgis/supercluster 0.1.0
 ├── LICENSE                     BSD-2-Clause（含上游归属声明）
 ├── README.md / README_zh.md    双语使用文档
+├── docs/ARCHITECTURE.md        本文
 ├── .trae/rules/                Trae 项目记忆（随仓库同步）
 ├── src/
 │   ├── geo.mbt                 墨卡托投影 + JS 兼容数值函数（~55 行）
@@ -75,7 +76,13 @@ moonbit-supercluster/
 │   ├── geojson.mbt             GeoJSON 输入适配器（~100 行）
 │   ├── places_fixture_test.mbt 上游 places.json fixture（行字符串嵌入）
 │   └── supercluster_test.mbt   17 个测试（含对拍断言，~470 行）
-└── examples/demo/main.mbt      可运行示例：2000 合成点 + 聚类统计 + tile 查询
+├── examples/demo/main.mbt      可运行示例：2000 合成点 + 聚类统计 + tile 查询
+└── web-demo/                   浏览器在线演示（纯静态站点，见 §7）
+    ├── index.html / app.js     地图页：胶水函数、Leaflet 渲染、统计面板
+    ├── mbapi/main.mbt          MoonBit 包装包（link.js.exports 导出绑定）
+    ├── mbapi.js                入库的 JS 后端编译产物（moon build 输出）
+    ├── data/gd_points.json     广东省六城 10 万合成点（tools/gen_data.js 生成）
+    └── tools/                  gen_data.js（造数据）/ serve.js（静态服务器）
 ```
 
 ## 3. geo.mbt —— 投影与 JS 兼容层
@@ -215,7 +222,77 @@ pub struct Options {
 2. 遍历 features：`Point` → 单坐标；`MultiPoint` → 展开为多条记录；其他 geometry 类型（如无 geometry）→ 保留占位（维持索引对齐）；
 3. [parse_pos](../src/geojson.mbt#L78) 校验 `[lng, lat]` 均为 JSON 数字，越界经纬度同样编码（与上游一致，不裁剪）。
 
-## 7. 测试与对拍策略
+## 7. web-demo —— 浏览器端绑定与在线演示
+
+[`web-demo/`](../web-demo/) 是一个纯静态站点，把本库的 MoonBit JS 后端编译
+产物接入 Leaflet，对广东省六城共 **10 万合成点**做真实地图聚合——这是
+「JS 后端 + 浏览器场景」的端到端验证，也是黑客松演示素材的来源。
+
+### 7.1 架构与数据流
+
+```
+gd_points.json（10 万点 [lng, lat, cityIdx]）
+      │ fetch → app.js
+      ▼
+Float64Array 平铺 [lng, lat, cityIdx] × n ──► globalThis.__SC_DATA
+globalThis.__SC_LNG / __SC_LAT / __SC_CITY    （JS 侧逐点访问器）
+      │ extern "js" 逐点回调（main.mbt 顶部声明）
+      ▼
+┌──────────────────────────────────────────┐
+│ web-demo/mbapi/main.mbt                  │
+│  sc_build_index(n)  组装 InputPoint → load() │
+│  sc_clusters(bbox, zoom)  get_clusters → JSON 字符串 │
+│  （moon.pkg: link.js.exports 导出表）     │
+└──────────────────────────────────────────┘
+      │ 返回紧凑 JSON 字符串
+      ▼
+app.js：Leaflet 分档渲染（簇 divIcon / 单点 circleMarker）+ 统计面板
+```
+
+### 7.2 绑定要点
+
+- **导出机制**：[mbapi/moon.pkg](../web-demo/mbapi/moon.pkg) 用
+  `link: { "js": { "exports": [...] } }` 把 `sc_version / sc_build_index /
+  sc_clusters` 挂到产物模块的 ES 导出表上，`app.js` 通过
+  `await import('./mbapi.js')` 拿到（见产物 [mbapi.js](../web-demo/mbapi.js)
+  末尾的 `export {...}`）。
+- **胶水函数必须先于动态 import 设置**：MoonBit 产物在**模块加载时**就捕获
+  `globalThis.__SC_*` 胶水函数引用（mbapi.js 顶部的三个 `const` 赋值），
+  内部再惰性解引用 `__SC_DATA`——因此 app.js 先注册胶水再 `import`，
+  顺序颠倒会拿到 undefined。
+- **数据契约**：`__SC_DATA` 为 `Float64Array`，按 `[lng, lat, cityIdx]`
+  平铺；MoonBit 侧经 `extern "js"` 声明三个访问器逐点读取，避免把 10 万点
+  直接传给 JSON 解析器。城市名（cityIdx → 广州/深圳/…）在 MoonBit 侧查表
+  转为点属性 `name`。
+- **结果序列化**：`sc_clusters` 手写 `StringBuilder` 拼紧凑 JSON
+  （`lng/lat` + 簇：`cluster/id/count`；单点：`cluster/name`），浏览器侧
+  一次 `JSON.parse` 拿到整批，再经 Leaflet 渲染。
+- **查询参数**：app.js 在 `moveend`/`zoomend` 时取地图视口 bbox 与
+  `Math.round(getZoom())`（钳到 0–16）调 `sc_clusters`，与「查询按需、
+  索引全量驻留内存」的语义一致（见 §1.1 Q2）。
+- **产物**：`web-demo/mbapi.js` 是提交入库的编译产物，由
+  `moon build --target js web-demo/mbapi` 生成于
+  `target/js/release/build/web-demo/mbapi/mbapi.js`；改动 main.mbt 后需重新
+  构建并覆盖（target/ 不入库，产物入库以保证静态站点开箱可用）。
+
+### 7.3 渲染与统计
+
+- 簇标记按 `count` 分四档（<10 / <50 / <200 / 其余）配尺寸与配色，对齐
+  原版 supercluster 的分档风格；≥10000 显示为 "Nk" 缩写。
+- 统计面板实时显示：绑定版本（`sc_version`，兼作 JS 绑定冒烟测试）、
+  点位总数、索引构建耗时（含数据下载与 `load()`）、当前 zoom、视野要素数
+  （簇/单点拆分）、最大簇、最近一次查询耗时。
+
+### 7.4 数据生成与运行
+
+- [`tools/gen_data.js`](../web-demo/tools/gen_data.js)：按六城中心 +
+  高斯扰动生成 10 万点（广州 2.8 万 / 深圳 2.4 万 / 东莞 1.4 万 /
+  佛山 1.3 万 / 中山 1.1 万 / 珠海 1 万），写入 `data/gd_points.json`
+  （模拟接口返回的本地数据）。
+- [`tools/serve.js`](../web-demo/tools/serve.js)：极简静态服务器，默认
+  8787 端口。必须经 HTTP 访问而非 `file://`（fetch + ES module 限制）。
+
+## 8. 测试与对拍策略
 
 17 个测试全部在 `moon test --target js` 下运行，核心方法是**对拍（parity testing）**：
 
@@ -223,7 +300,7 @@ pub struct Options {
 - tile 测试逐字节比对 `tags`（含 cluster/cluster_id/point_count/point_count_abbreviated）；
 - 覆盖边界：`generateId` 序列、null-property 要素、跨日期变更线 bbox、退化 bbox 计数（26/27/26/25/25/25/61）、同坐标点、MultiPoint、零输入、`map/reduce` 求和链路、`minPoints/radius/extent/maxZoom` 各选项。
 
-## 8. 复杂度
+## 9. 复杂度
 
 | 操作 | 复杂度 |
 | --- | --- |
@@ -232,7 +309,7 @@ pub struct Options {
 | `get_children` / `get_leaves` / expansion zoom | O(log n + 子树大小) |
 | 内存 | 每层 `n_layer × stride × 4` 字节 + 每树两份 Int32 数组 |
 
-## 9. 与上游的差异点汇总
+## 10. 与上游的差异点汇总
 
 | # | 上游（JS） | 本移植（MoonBit） |
 | --- | --- | --- |
@@ -243,11 +320,13 @@ pub struct Options {
 | 5 | 对象引用共享（reduce 副作用） | `shallow_clone_json` 显式浅拷贝，语义等价但更可控 |
 | 6 | 递归 DFS（V8 栈深限制） | 手工栈迭代，无栈深风险 |
 
-## 10. 开发者速查
+## 11. 开发者速查
 
 ```
 moon test --target js                 # 全量测试（17/17）
-moon run examples/demo --target js    # 可运行示例
+moon run examples/demo --target js    # 控制台示例
+moon build --target js web-demo/mbapi # 构建 web-demo 绑定产物
+node web-demo/tools/serve.js          # 在线演示（http://localhost:8787）
 ```
 
 - 本机无 C 编译器，统一用 `--target js`；Wasm 后端理论上兼容（纯 MoonBit，无 FFI）。

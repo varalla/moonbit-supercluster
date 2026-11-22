@@ -100,6 +100,42 @@ cluster expansion, tile query) lives in `examples/demo`:
 moon run examples/demo --target js
 ```
 
+## Browser demo
+
+[`web-demo/`](web-demo/) is a static site that plugs the MoonBit JS-backend
+build artifact into a Leaflet map and clusters **100,000 synthetic points**
+spread around six Guangdong cities (Guangzhou, Shenzhen, Dongguan, Foshan,
+Zhongshan, Zhuhai):
+
+```
+cd web-demo
+node tools/gen_data.js     # regenerate data/gd_points.json (optional, committed)
+node tools/serve.js        # serve at http://localhost:8787
+```
+
+Open <http://localhost:8787> in a browser — the page must be served over HTTP
+(not opened as `file://`) because it fetches data and uses ES modules.
+
+How it works:
+
+- [`web-demo/mbapi/main.mbt`](web-demo/mbapi/main.mbt) wraps the library and
+  exposes three functions to JavaScript via the MoonBit `link.js.exports`
+  mechanism: `sc_version`, `sc_build_index` (assembles `InputPoint`s from
+  JS-provided data and runs `load()`) and `sc_clusters` (bbox query returning
+  a compact JSON string).
+- Data crosses the boundary as a flat `Float64Array` (`[lng, lat, cityIdx] ×
+  n`) plus three accessor glue functions (`__SC_LNG` / `__SC_LAT` /
+  `__SC_CITY`) that MoonBit reads via `extern "js"` — avoiding the cost of
+  pushing 100k points through a JSON parser.
+- [`app.js`](web-demo/app.js) renders clusters as size/color-graded circle
+  markers (upstream supercluster style buckets) and single points as small
+  circle markers, with a live stats panel: index build time, per-viewport
+  feature counts (clusters vs. points), biggest cluster and query latency.
+- [`web-demo/mbapi.js`](web-demo/mbapi.js) is the committed MoonBit build
+  artifact. After changing `main.mbt`, rebuild with
+  `moon build --target js web-demo/mbapi` and copy
+  `target/js/release/build/web-demo/mbapi/mbapi.js` over it.
+
 ## API
 
 | API | Description |
@@ -220,7 +256,13 @@ src/
   geojson.mbt              GeoJSON Point/MultiPoint input adapter
   places_fixture_test.mbt  Embedded upstream fixtures (parity tests)
   supercluster_test.mbt    17 tests incl. parity assertions
-examples/demo/             Runnable demo
+examples/demo/             Runnable console demo (2000 synthetic points)
+web-demo/                  Browser demo: Leaflet map + 100k points,
+                           JS-backend build artifact (mbapi.js)
+  mbapi/                   MoonBit wrapper package (link.js.exports)
+  app.js / index.html      Map page: glue, rendering, stats panel
+  data/gd_points.json      Synthetic dataset (regenerate: tools/gen_data.js)
+  tools/serve.js           Minimal static server (port 8787)
 ```
 
 ## License
