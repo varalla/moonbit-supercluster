@@ -7,8 +7,10 @@
 浏览器（WebGIS）的高速地理点聚合库 —— 并内嵌移植了它所依赖的静态 KD-tree
 [mourner/kdbush](https://github.com/mourner/kdbush)。
 
-可运行于 MoonBit **JS 后端**（Node.js / 浏览器），并为 Wasm 后端做好准备，
-非常适合基于 MoonBit 的 WebGIS 技术栈。
+可运行于 MoonBit **JS 后端**（Node.js / 浏览器）；核心库为纯 MoonBit 无
+FFI，已在 **wasm / wasm-gc 后端通过全量测试（26/26）**，浏览器 wasm 绑定
+（替代 `extern "js"` 逐点回调的 FFI）在规划中，非常适合基于 MoonBit 的
+WebGIS 技术栈。
 
 ```
 moon test --target js

@@ -8,8 +8,11 @@ geospatial point clustering library for browsers (WebGIS) — including an
 embedded port of [mourner/kdbush](https://github.com/mourner/kdbush), the
 static KD-tree it is built on.
 
-Runs on the MoonBit **JS backend** (Node.js / browsers) and is ready for the
-Wasm backend, making it a natural fit for MoonBit-based WebGIS stacks.
+Runs on the MoonBit **JS backend** (Node.js / browsers). The core library is
+pure MoonBit with no FFI and already passes the full test suite (26/26) on
+the **wasm / wasm-gc backends**; a browser wasm binding (an FFI replacing
+the `extern "js"` per-point callbacks) is planned — a natural fit for
+MoonBit-based WebGIS stacks.
 
 ```
 moon test --target js

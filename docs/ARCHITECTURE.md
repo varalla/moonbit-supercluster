@@ -404,7 +404,15 @@ moon build --target js web-demo/mbapi # 构建 web-demo 绑定产物
 node web-demo/tools/serve.js          # 在线演示（http://localhost:8787）
 ```
 
-- 本机无 C 编译器，统一用 `--target js`；Wasm 后端理论上兼容（纯 MoonBit，无 FFI）。
+- 本机无 C 编译器，native 后端不可用；日常用 `--target js`。
+- **Wasm 后端实测（2026-11-23）**：核心库 `src` 为纯 MoonBit 无 FFI，
+  `moon test --target wasm-gc src` 与 `moon test --target wasm src`
+  均 **26/26 全绿**。但浏览器绑定层 [mbapi](../web-demo/mbapi/main.mbt)
+  使用的 `extern "js"` 在 wasm-gc 后端**不支持**（实测报错），要出 wasm
+  产物需重写绑定 FFI：宿主一次性喂数据（替代逐点回调）+ 字符串经
+  缓冲区出参（wasm 导出签名仅数值类型）+ `fetch`/`instantiate` 的
+  loader.js 胶水——浏览器不能直接 `import` `.wasm` 文件。当前对外产物
+  以 JS 后端 `mbapi.js` 为准。
 - 改聚类语义前先读 [5.2 槽布局](#52-扁平槽布局stride--6-或-7)与 [5.3 cluster_id 编码](#53-cluster_id-位打包)，测试期望值改动需回原版 JS 重新生成。
 - 更多环境注意事项见 [.trae/rules/project_memory.md](../.trae/rules/project_memory.md)。
 

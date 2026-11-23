@@ -106,7 +106,7 @@ web-demo/                  浏览器在线演示（Leaflet + 广东六城 10 万
 **【立项】报名初立项阶段需先准备（当前全部就绪，只差填表单）：**
 
 1. ✅ 可运行代码仓库（gitee+GitHub 双仓库，需确认 GitHub 仓库为 public）
-2. ✅ 项目简介文案（一句话+亮点，README 开头可直接复用：纯 MoonBit 移植 mapbox/supercluster 含 kdbush；17/17 对拍全绿；扁平整数数组；JS/Wasm 双后端）
+2. ✅ 项目简介文案（一句话+亮点，README 开头可直接复用：纯 MoonBit 移植 mapbox/supercluster 含 kdbush；26/26 对拍全绿；扁平整数数组；JS 后端可用，核心库 wasm/wasm-gc 测试通过）
 3. ✅ 可复现验证命令（`moon test --target js` / `moon run examples/demo --target js`）
 4. ⚠️ demo 运行演示——立项只需基础版（examples/demo 控制台输出够用）
 5. ⚠️ 报名表基础字段（项目名/团队联系方式/仓库链接/立项编号）——待填
@@ -124,6 +124,6 @@ web-demo/                  浏览器在线演示（Leaflet + 广东六城 10 万
 ## 待办 / 后续方向
 
 - [ ] mooncakes.io 发布（`moon publish`，需注册 moonbitgis 账号）
-- [ ] Wasm 后端验证（`moon test --target wasm`，当前仅验证 JS）
+- [ ] Wasm 绑定产物落地（核心库已验证：`moon test --target wasm-gc src` / `--target wasm src` 均 26/26 全绿，2026-11-23；卡点在 web-demo/mbapi 的 `extern "js"` 不支持 wasm-gc 后端，需重写 FFI——宿主一次性喂数据 + 字符串缓冲区出参 + loader.js，浏览器不能直接 import .wasm；当前对外产物仅 JS 后端 mbapi.js）
 - [ ] 性能基准对比原版 JS（100 万点 load + 查询耗时）
 - [ ] 黑客松提交材料（演示视频/截图）
