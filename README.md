@@ -8,6 +8,20 @@ geospatial point clustering library for browsers (WebGIS) — including an
 embedded port of [mourner/kdbush](https://github.com/mourner/kdbush), the
 static KD-tree it is built on.
 
+**Why these two extensions**: real-world WebGIS projects routinely handle
+massive, complex POI datasets that must be rendered on the map at a glance,
+while business requirements often call for drill-down views by
+administrative divisions — city → district/county → subdistrict →
+community. Upstream supercluster solves the "fast" part: high-performance
+clustering of huge point sets. On top of the pure-MoonBit port, this
+project adds two capabilities targeting these pain points: **coordinate
+system input** (GCJ-02 / BD-09) resolves the offset between domestic
+encrypted data and the basemap, and **polygon regions** anchor every point
+to its administrative division at `load()` time, enabling direct filtered
+queries at city/district granularity. See
+[Coordinate systems](#coordinate-systems-gcj-02--bd-09) and
+[Polygon regions](#polygon-regions).
+
 Runs on the MoonBit **JS backend** (Node.js / browsers). The core library is
 pure MoonBit with no FFI and already passes the full test suite (26/26) on
 the **wasm / wasm-gc backends**; a browser wasm binding (an FFI replacing
