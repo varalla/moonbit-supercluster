@@ -99,7 +99,7 @@ _M0DTPC14json4Json6Object.prototype.$tag = 6;
 function _M0TPC13ref3RefGORP310moonbitgis12supercluster3src12SuperclusterE(param0) {
   this.val = param0;
 }
-function _M0TP310moonbitgis12supercluster3src7Options(param0, param1, param2, param3, param4, param5, param6, param7, param8) {
+function _M0TP310moonbitgis12supercluster3src7Options(param0, param1, param2, param3, param4, param5, param6, param7, param8, param9, param10) {
   this.min_zoom = param0;
   this.max_zoom = param1;
   this.min_points = param2;
@@ -109,6 +109,12 @@ function _M0TP310moonbitgis12supercluster3src7Options(param0, param1, param2, pa
   this.generate_id = param6;
   this.map = param7;
   this.reduce = param8;
+  this.coord_system = param9;
+  this.regions = param10;
+}
+function _M0TPB5ArrayGRP310moonbitgis12supercluster3src7PolygonE(param0, param1) {
+  this.buf = param0;
+  this.len = param1;
 }
 function _M0TP310moonbitgis12supercluster3src10InputPoint(param0, param1, param2) {
   this.id = param0;
@@ -128,7 +134,7 @@ function _M0TP310moonbitgis12supercluster3src6KDBush(param0, param1, param2, par
   this.finished = param5;
   this.data = param6;
 }
-function _M0TP310moonbitgis12supercluster3src12Supercluster(param0, param1, param2, param3, param4, param5, param6, param7) {
+function _M0TP310moonbitgis12supercluster3src12Supercluster(param0, param1, param2, param3, param4, param5, param6, param7, param8) {
   this.options = param0;
   this.trees = param1;
   this.stride = param2;
@@ -137,6 +143,13 @@ function _M0TP310moonbitgis12supercluster3src12Supercluster(param0, param1, para
   this.props = param5;
   this.coords = param6;
   this.ids = param7;
+  this.region_ids = param8;
+}
+function _M0TPB8MutLocalGdE(param0) {
+  this.val = param0;
+}
+function _M0TPB8MutLocalGbE(param0) {
+  this.val = param0;
 }
 function _M0TPB5ArrayGiE(param0, param1) {
   this.buf = param0;
@@ -146,9 +159,6 @@ function _M0TPB9ArrayViewGUsRPC14json4JsonEE(param0, param1, param2) {
   this.buf = param0;
   this.start = param1;
   this.end = param2;
-}
-function _M0TPB8MutLocalGdE(param0) {
-  this.val = param0;
 }
 function _M0TPB8MutLocalGORPC14json4JsonE(param0) {
   this.val = param0;
@@ -191,9 +201,9 @@ function _M0DTPC16option6OptionGOWRPC14json4JsonRPC14json4JsonEuE4Some(param0) {
 }
 _M0DTPC16option6OptionGOWRPC14json4JsonRPC14json4JsonEuE4Some.prototype.$tag = 1;
 const _M0FP092moonbitlang_2fcore_2fbuiltin_2fStringBuilder_24as_24_40moonbitlang_2fcore_2fbuiltin_2eLogger = { method_0: _M0IPB13StringBuilderPB6Logger13write__string, method_1: _M0IP016_24default__implPB6Logger16write__substringGRPB13StringBuilderE, method_2: _M0IPB13StringBuilderPB6Logger11write__view, method_3: _M0IPB13StringBuilderPB6Logger11write__char, method_4: _M0IP016_24default__implPB6Logger28write__string__interpolationGRPB13StringBuilderE, method_5: _M0IP016_24default__implPB6Logger5writeGRPB13StringBuilderE };
-const _M0MPB4Iter4nextN6constrS159GUsRPC14json4JsonEE = 0;
-const _M0MPB4Iter4nextN6constrS160GUsRPC14json4JsonEE = 0;
-const _M0MPB4Iter3newN6constrS169GUsRPC14json4JsonEE = 0;
+const _M0MPB4Iter4nextN6constrS161GUsRPC14json4JsonEE = 0;
+const _M0MPB4Iter4nextN6constrS162GUsRPC14json4JsonEE = 0;
+const _M0MPB4Iter3newN6constrS171GUsRPC14json4JsonEE = 0;
 const _M0FP410moonbitgis12supercluster10web_2ddemo5mbapi6cities = new _M0TPB5ArrayGsE(["广州", "深圳", "东莞", "佛山", "中山", "珠海"], 6);
 const _M0FPB4seed = _M0FPB12random__seed();
 const _M0FP410moonbitgis12supercluster10web_2ddemo5mbapi10index__ref = _M0MPC13ref3Ref3RefGORP310moonbitgis12supercluster3src12SuperclusterE(undefined);
@@ -375,6 +385,9 @@ function _M0MPC16uint166UInt1622is__leading__surrogate(self) {
 function _M0MPC16uint166UInt1623is__trailing__surrogate(self) {
   return self >= 56320 && self <= 57343;
 }
+function _M0IP016_24default__implPB2Eq10not__equalGbE(x, y) {
+  return !(x === y);
+}
 function _M0FPB14avalanche__acc(acc) {
   let acc$2 = acc;
   acc$2 = acc$2 ^ (acc$2 >>> 15 | 0);
@@ -417,13 +430,13 @@ function _M0MPB4Iter4nextGUsRPC14json4JsonEE(self) {
   const result = _func();
   const _bind = self.size_hint;
   if (result === undefined) {
-    self.size_hint = _M0MPB4Iter4nextN6constrS160GUsRPC14json4JsonEE;
+    self.size_hint = _M0MPB4Iter4nextN6constrS162GUsRPC14json4JsonEE;
   } else {
     if (_bind === undefined) {
     } else {
       const _Some = _bind;
       const _n = _Some;
-      self.size_hint = _n > 0 ? _n - 1 | 0 : _M0MPB4Iter4nextN6constrS159GUsRPC14json4JsonEE;
+      self.size_hint = _n > 0 ? _n - 1 | 0 : _M0MPB4Iter4nextN6constrS161GUsRPC14json4JsonEE;
     }
   }
   return result;
@@ -438,7 +451,7 @@ function _M0MPB4Iter3newGUsRPC14json4JsonEE(f, size_hint) {
   } else {
     const _Some = size_hint;
     const _n = _Some;
-    size_hint$2 = _n > 0 ? _n : _M0MPB4Iter3newN6constrS169GUsRPC14json4JsonEE;
+    size_hint$2 = _n > 0 ? _n : _M0MPB4Iter3newN6constrS171GUsRPC14json4JsonEE;
   }
   return new _M0TPB4IterGUsRPC14json4JsonEE(f, size_hint$2);
 }
@@ -448,7 +461,7 @@ function _M0MPC16string10StringView9to__owned(self) {
 function _M0IPB13StringBuilderPB6Logger11write__view(self, str) {
   self.val = `${self.val}${_M0MPC16string10StringView9to__owned(str)}`;
 }
-function _M0MPC15array5Array6lengthGUddEE(self) {
+function _M0MPC15array5Array6lengthGRP310moonbitgis12supercluster3src7PolygonE(self) {
   return self.len;
 }
 function _M0MPC15array5Array6lengthGiE(self) {
@@ -908,8 +921,14 @@ function _M0MPC13ref3Ref3RefGORP310moonbitgis12supercluster3src12SuperclusterE(x
 function _M0FPC14math3sin(_tmp) {
   return Math.sin(_tmp);
 }
+function _M0FPC14math3cos(_tmp) {
+  return Math.cos(_tmp);
+}
 function _M0FPC14math4atan(_tmp) {
   return Math.atan(_tmp);
+}
+function _M0FPC14math5atan2(_tmp, _tmp$2) {
+  return Math.atan2(_tmp, _tmp$2);
 }
 function _M0FPC14math2ln(_tmp) {
   return Math.log(_tmp);
@@ -920,10 +939,10 @@ function _M0FPC14math3exp(_tmp) {
 function _M0FP310moonbitgis12supercluster3src15identity__props(props) {
   return props;
 }
-function _M0MP310moonbitgis12supercluster3src7Options11new_2einner(min_zoom, max_zoom, min_points, radius, extent, node_size, generate_id, map, reduce) {
-  return new _M0TP310moonbitgis12supercluster3src7Options(min_zoom, max_zoom, min_points, radius, extent, node_size, generate_id, map, reduce);
+function _M0MP310moonbitgis12supercluster3src7Options11new_2einner(min_zoom, max_zoom, min_points, radius, extent, node_size, generate_id, map, reduce, coord_system, regions) {
+  return new _M0TP310moonbitgis12supercluster3src7Options(min_zoom, max_zoom, min_points, radius, extent, node_size, generate_id, map, reduce, coord_system, regions);
 }
-function _M0MP310moonbitgis12supercluster3src7Options3new(min_zoom$46$opt, max_zoom$46$opt, min_points$46$opt, radius$46$opt, extent$46$opt, node_size$46$opt, generate_id$46$opt, map$46$opt, reduce$46$opt) {
+function _M0MP310moonbitgis12supercluster3src7Options3new(min_zoom$46$opt, max_zoom$46$opt, min_points$46$opt, radius$46$opt, extent$46$opt, node_size$46$opt, generate_id$46$opt, map$46$opt, reduce$46$opt, coord_system$46$opt, regions$46$opt) {
   let min_zoom;
   if (min_zoom$46$opt === undefined) {
     min_zoom = 0;
@@ -981,7 +1000,21 @@ function _M0MP310moonbitgis12supercluster3src7Options3new(min_zoom$46$opt, max_z
   } else {
     reduce = undefined;
   }
-  return _M0MP310moonbitgis12supercluster3src7Options11new_2einner(min_zoom, max_zoom, min_points, radius, extent, node_size, generate_id, map, reduce);
+  let coord_system;
+  if (coord_system$46$opt === undefined) {
+    coord_system = 0;
+  } else {
+    const _Some = coord_system$46$opt;
+    coord_system = _Some;
+  }
+  let regions;
+  if (regions$46$opt === undefined) {
+    regions = new _M0TPB5ArrayGRP310moonbitgis12supercluster3src7PolygonE([], 0);
+  } else {
+    const _Some = regions$46$opt;
+    regions = _Some;
+  }
+  return _M0MP310moonbitgis12supercluster3src7Options11new_2einner(min_zoom, max_zoom, min_points, radius, extent, node_size, generate_id, map, reduce, coord_system, regions);
 }
 function _M0MP310moonbitgis12supercluster3src10InputPoint4make(id, properties, coords) {
   return new _M0TP310moonbitgis12supercluster3src10InputPoint(id, properties, coords);
@@ -1006,11 +1039,102 @@ function _M0MP310moonbitgis12supercluster3src6KDBush3new(num_items, node_size) {
 function _M0MP310moonbitgis12supercluster3src12Supercluster3new(options) {
   const max_zoom = _M0FP310moonbitgis12supercluster3src8int__min(options.max_zoom, 30);
   const min_zoom = _M0FP310moonbitgis12supercluster3src8int__min(options.min_zoom, max_zoom);
-  const opts = new _M0TP310moonbitgis12supercluster3src7Options(min_zoom, max_zoom, options.min_points, options.radius, options.extent, options.node_size, options.generate_id, options.map, options.reduce);
+  const opts = new _M0TP310moonbitgis12supercluster3src7Options(min_zoom, max_zoom, options.min_points, options.radius, options.extent, options.node_size, options.generate_id, options.map, options.reduce, options.coord_system, options.regions);
   const _bind = opts.reduce;
   const stride = _bind === undefined ? 6 : 7;
   const trees = $make_array_len_and_init(opts.max_zoom + 2 | 0, _M0MP310moonbitgis12supercluster3src6KDBush3new(0, 64));
-  return new _M0TP310moonbitgis12supercluster3src12Supercluster(opts, trees, stride, new _M0TPB5ArrayGRPC14json4JsonE([], 0), 0, new _M0TPB5ArrayGRPC14json4JsonE([], 0), $make_array_len_and_init(0, 0), $make_array_len_and_init(0, undefined));
+  return new _M0TP310moonbitgis12supercluster3src12Supercluster(opts, trees, stride, new _M0TPB5ArrayGRPC14json4JsonE([], 0), 0, new _M0TPB5ArrayGRPC14json4JsonE([], 0), $make_array_len_and_init(0, 0), $make_array_len_and_init(0, undefined), $make_array_len_and_init(0, -1));
+}
+function _M0FP310moonbitgis12supercluster3src15bd09__to__gcj02(lng, lat) {
+  const x = lng - 0.0065;
+  const y = lat - 0.006;
+  const z = Math.sqrt(x * x + y * y) - 2e-005 * _M0FPC14math3sin(y * 52.359877559829883);
+  const theta = _M0FPC14math5atan2(y, x) - 3e-006 * _M0FPC14math3cos(x * 52.359877559829883);
+  return { _0: z * _M0FPC14math3cos(theta), _1: z * _M0FPC14math3sin(theta) };
+}
+function _M0FP310moonbitgis12supercluster3src19gcj__transform__lat(x, y) {
+  const ret = new _M0TPB8MutLocalGdE(-100 + 2 * x + 3 * y + 0.2 * y * y + 0.1 * x * y + 0.2 * Math.sqrt(Math.abs(x)));
+  ret.val = ret.val + (20 * _M0FPC14math3sin(6 * x * 3.1415926535897931) + 20 * _M0FPC14math3sin(2 * x * 3.1415926535897931)) * 2 / 3;
+  ret.val = ret.val + (20 * _M0FPC14math3sin(y * 3.1415926535897931) + 40 * _M0FPC14math3sin(y / 3 * 3.1415926535897931)) * 2 / 3;
+  ret.val = ret.val + (160 * _M0FPC14math3sin(y / 12 * 3.1415926535897931) + 320 * _M0FPC14math3sin(y * 3.1415926535897931 / 30)) * 2 / 3;
+  return ret.val;
+}
+function _M0FP310moonbitgis12supercluster3src19gcj__transform__lng(x, y) {
+  const ret = new _M0TPB8MutLocalGdE(300 + x + 2 * y + 0.1 * x * x + 0.1 * x * y + 0.1 * Math.sqrt(Math.abs(x)));
+  ret.val = ret.val + (20 * _M0FPC14math3sin(6 * x * 3.1415926535897931) + 20 * _M0FPC14math3sin(2 * x * 3.1415926535897931)) * 2 / 3;
+  ret.val = ret.val + (20 * _M0FPC14math3sin(x * 3.1415926535897931) + 40 * _M0FPC14math3sin(x / 3 * 3.1415926535897931)) * 2 / 3;
+  ret.val = ret.val + (150 * _M0FPC14math3sin(x / 12 * 3.1415926535897931) + 300 * _M0FPC14math3sin(x / 30 * 3.1415926535897931)) * 2 / 3;
+  return ret.val;
+}
+function _M0FP310moonbitgis12supercluster3src14out__of__china(lng, lat) {
+  return lng < 72.004 || (lng > 137.8347 || (lat < 0.8293 || lat > 55.8271));
+}
+function _M0FP310moonbitgis12supercluster3src16wgs84__to__gcj02(lng, lat) {
+  if (_M0FP310moonbitgis12supercluster3src14out__of__china(lng, lat)) {
+    return { _0: lng, _1: lat };
+  }
+  const rad_lat = lat * 3.1415926535897931 / 180;
+  const magic = new _M0TPB8MutLocalGdE(_M0FPC14math3sin(rad_lat));
+  magic.val = 1 - 0.0066934216229659433 * magic.val * magic.val;
+  const sqrt_magic = Math.sqrt(magic.val);
+  const d_lat = _M0FP310moonbitgis12supercluster3src19gcj__transform__lat(lng - 105, lat - 35) * 180 / (6335552.7170004258 / (magic.val * sqrt_magic) * 3.1415926535897931);
+  const d_lng = _M0FP310moonbitgis12supercluster3src19gcj__transform__lng(lng - 105, lat - 35) * 180 / (6378245 / sqrt_magic * _M0FPC14math3cos(rad_lat) * 3.1415926535897931);
+  return { _0: lng + d_lng, _1: lat + d_lat };
+}
+function _M0FP310moonbitgis12supercluster3src16gcj02__to__wgs84(lng, lat) {
+  const w_lng = new _M0TPB8MutLocalGdE(lng);
+  const w_lat = new _M0TPB8MutLocalGdE(lat);
+  const _bind = 0;
+  const _bind$2 = 2;
+  let _tmp = _bind;
+  while (true) {
+    const _ = _tmp;
+    if (_ < _bind$2) {
+      let g_lng;
+      let g_lat;
+      _L: {
+        const _bind$3 = _M0FP310moonbitgis12supercluster3src16wgs84__to__gcj02(w_lng.val, w_lat.val);
+        const _g_lng = _bind$3._0;
+        const _g_lat = _bind$3._1;
+        g_lng = _g_lng;
+        g_lat = _g_lat;
+        break _L;
+      }
+      w_lng.val = w_lng.val + (lng - g_lng);
+      w_lat.val = w_lat.val + (lat - g_lat);
+      _tmp = _ + 1 | 0;
+      continue;
+    } else {
+      break;
+    }
+  }
+  return { _0: w_lng.val, _1: w_lat.val };
+}
+function _M0FP310moonbitgis12supercluster3src15bd09__to__wgs84(lng, lat) {
+  let g_lng;
+  let g_lat;
+  _L: {
+    const _bind = _M0FP310moonbitgis12supercluster3src15bd09__to__gcj02(lng, lat);
+    const _g_lng = _bind._0;
+    const _g_lat = _bind._1;
+    g_lng = _g_lng;
+    g_lat = _g_lat;
+    break _L;
+  }
+  return _M0FP310moonbitgis12supercluster3src16gcj02__to__wgs84(g_lng, g_lat);
+}
+function _M0FP310moonbitgis12supercluster3src16input__to__wgs84(system, lng, lat) {
+  switch (system) {
+    case 0: {
+      return { _0: lng, _1: lat };
+    }
+    case 1: {
+      return _M0FP310moonbitgis12supercluster3src16gcj02__to__wgs84(lng, lat);
+    }
+    default: {
+      return _M0FP310moonbitgis12supercluster3src15bd09__to__wgs84(lng, lat);
+    }
+  }
 }
 function _M0FP310moonbitgis12supercluster3src6lat__y(lat) {
   const sin = _M0FPC14math3sin(lat * 3.1415926535897931 / 180);
@@ -1019,6 +1143,71 @@ function _M0FP310moonbitgis12supercluster3src6lat__y(lat) {
 }
 function _M0FP310moonbitgis12supercluster3src6lng__x(lng) {
   return lng / 360 + 0.5;
+}
+function _M0FP310moonbitgis12supercluster3src14ring__contains(ring, x, y) {
+  const inside = new _M0TPB8MutLocalGbE(false);
+  const n = _M0MPC15array5Array6lengthGRP310moonbitgis12supercluster3src7PolygonE(ring);
+  const j = new _M0TPB8MutLocalGiE(n - 1 | 0);
+  const _bind = 0;
+  let _tmp = _bind;
+  while (true) {
+    const i = _tmp;
+    if (i < n) {
+      let xi;
+      let yi;
+      _L: {
+        const _bind$2 = _M0MPC15array5Array2atGUddEE(ring, i);
+        const _xi = _bind$2._0;
+        const _yi = _bind$2._1;
+        xi = _xi;
+        yi = _yi;
+        break _L;
+      }
+      let xj;
+      let yj;
+      _L$2: {
+        const _bind$2 = _M0MPC15array5Array2atGUddEE(ring, j.val);
+        const _xj = _bind$2._0;
+        const _yj = _bind$2._1;
+        xj = _xj;
+        yj = _yj;
+        break _L$2;
+      }
+      if (_M0IP016_24default__implPB2Eq10not__equalGbE(yi > y, yj > y)) {
+        const cross_x = (xj - xi) * (y - yi) / (yj - yi) + xi;
+        if (x < cross_x) {
+          inside.val = !inside.val;
+        }
+      }
+      j.val = i;
+      _tmp = i + 1 | 0;
+      continue;
+    } else {
+      break;
+    }
+  }
+  return inside.val;
+}
+function _M0MP310moonbitgis12supercluster3src7Polygon8contains(self, lng, lat) {
+  const inside = new _M0TPB8MutLocalGbE(false);
+  const _bind = self.rings;
+  const _bind$2 = _bind.len;
+  const _bind$3 = _bind.buf;
+  let _tmp = 0;
+  while (true) {
+    const _ = _tmp;
+    if (_ < _bind$2) {
+      const ring = _bind$3[_];
+      if (_M0FP310moonbitgis12supercluster3src14ring__contains(ring, lng, lat)) {
+        inside.val = !inside.val;
+      }
+      _tmp = _ + 1 | 0;
+      continue;
+    } else {
+      break;
+    }
+  }
+  return inside.val;
 }
 function _M0MP310moonbitgis12supercluster3src6KDBush6within(self, qx, qy, r) {
   const result = new _M0TPB5ArrayGiE([], 0);
@@ -1326,7 +1515,7 @@ function _M0MP310moonbitgis12supercluster3src12Supercluster15cluster__points(sel
                     const _bind$3 = cluster_properties.val;
                     if (_bind$3 === undefined) {
                       const init = _M0MP310moonbitgis12supercluster3src12Supercluster10map__props(self, data, i.val, true);
-                      cluster_prop_index.val = _M0MPC15array5Array6lengthGUddEE(self.cluster_props);
+                      cluster_prop_index.val = _M0MPC15array5Array6lengthGRP310moonbitgis12supercluster3src7PolygonE(self.cluster_props);
                       _M0MPC15array5Array4pushGRP310moonbitgis12supercluster3src7FeatureE(self.cluster_props, init);
                       cluster_properties.val = init;
                       reduce(init, _M0MP310moonbitgis12supercluster3src12Supercluster10map__props(self, data, k, false));
@@ -1687,7 +1876,7 @@ function _M0MP310moonbitgis12supercluster3src12Supercluster4load(self, points) {
     const _ = _tmp;
     if (_ < _bind) {
       const p = _bind$2[_];
-      n.val = n.val + (_M0MPC15array5Array6lengthGUddEE(p.coords) === 0 ? 1 : _M0MPC15array5Array6lengthGUddEE(p.coords)) | 0;
+      n.val = n.val + (_M0MPC15array5Array6lengthGRP310moonbitgis12supercluster3src7PolygonE(p.coords) === 0 ? 1 : _M0MPC15array5Array6lengthGRP310moonbitgis12supercluster3src7PolygonE(p.coords)) | 0;
       _tmp = _ + 1 | 0;
       continue;
     } else {
@@ -1699,6 +1888,8 @@ function _M0MP310moonbitgis12supercluster3src12Supercluster4load(self, points) {
   const props = _M0MPC15array5Array4makeGRPC14json4JsonE(num_points, _M0MPC14json4Json4null());
   const coords = $make_array_len_and_init(Math.imul(num_points, 2) | 0, 0);
   const ids = $make_array_len_and_init(num_points, undefined);
+  const region_ids = $make_array_len_and_init(num_points, -1);
+  const regions = opts.regions;
   const data = $make_array_len_and_init(Math.imul(num_points, stride) | 0, 0);
   const w = new _M0TPB8MutLocalGiE(0);
   const i = new _M0TPB8MutLocalGiE(0);
@@ -1710,7 +1901,7 @@ function _M0MP310moonbitgis12supercluster3src12Supercluster4load(self, points) {
     if (_ < _bind$3) {
       const p = _bind$4[_];
       _L: {
-        const n$2 = _M0MPC15array5Array6lengthGUddEE(p.coords);
+        const n$2 = _M0MPC15array5Array6lengthGRP310moonbitgis12supercluster3src7PolygonE(p.coords);
         if (n$2 === 0) {
           i.val = i.val + 1 | 0;
           break _L;
@@ -1720,15 +1911,51 @@ function _M0MP310moonbitgis12supercluster3src12Supercluster4load(self, points) {
         while (true) {
           const c = _tmp$3;
           if (c < n$2) {
-            let lng;
-            let lat;
+            let lng0;
+            let lat0;
             _L$2: {
               const _bind$6 = _M0MPC15array5Array2atGUddEE(p.coords, c);
+              const _lng0 = _bind$6._0;
+              const _lat0 = _bind$6._1;
+              lng0 = _lng0;
+              lat0 = _lat0;
+              break _L$2;
+            }
+            if (_M0MPC15array5Array6lengthGRP310moonbitgis12supercluster3src7PolygonE(regions) > 0) {
+              const r = new _M0TPB8MutLocalGiE(-1);
+              const _bind$6 = regions.len;
+              const _bind$7 = regions.buf;
+              let _tmp$4 = 0;
+              while (true) {
+                const ri = _tmp$4;
+                if (ri < _bind$6) {
+                  const poly = _bind$7[ri];
+                  if (_M0MP310moonbitgis12supercluster3src7Polygon8contains(poly, lng0, lat0)) {
+                    r.val = ri;
+                    break;
+                  }
+                  _tmp$4 = ri + 1 | 0;
+                  continue;
+                } else {
+                  break;
+                }
+              }
+              const _tmp$5 = i.val;
+              if (_tmp$5 >>> 0 < region_ids.length) {
+                region_ids[_tmp$5] = r.val;
+              } else {
+                $oob();
+              }
+            }
+            let lng;
+            let lat;
+            _L$3: {
+              const _bind$6 = _M0FP310moonbitgis12supercluster3src16input__to__wgs84(opts.coord_system, lng0, lat0);
               const _lng = _bind$6._0;
               const _lat = _bind$6._1;
               lng = _lng;
               lat = _lat;
-              break _L$2;
+              break _L$3;
             }
             const px = _M0FP310moonbitgis12supercluster3src6lng__x(lng);
             const py = _M0FP310moonbitgis12supercluster3src6lat__y(lat);
@@ -1782,17 +2009,17 @@ function _M0MP310moonbitgis12supercluster3src12Supercluster4load(self, points) {
             }
             _M0MPC15array5Array3setGRPC14json4JsonE(props, i.val, p.properties);
             let id;
-            _L$3: {
-              _L$4: {
+            _L$4: {
+              _L$5: {
                 const _bind$6 = p.id;
                 if (_bind$6 === undefined) {
                 } else {
                   const _Some = _bind$6;
                   const _id = _Some;
                   id = _id;
-                  break _L$4;
+                  break _L$5;
                 }
-                break _L$3;
+                break _L$4;
               }
               const _tmp$12 = i.val;
               if (_tmp$12 >>> 0 < ids.length) {
@@ -1820,6 +2047,7 @@ function _M0MP310moonbitgis12supercluster3src12Supercluster4load(self, points) {
   self.props = props;
   self.coords = coords;
   self.ids = ids;
+  self.region_ids = region_ids;
   const prev = new _M0TPB8MutLocalGAiE(data);
   const prev_num = new _M0TPB8MutLocalGiE(i.val);
   const _tmp$3 = self.trees;
@@ -2013,7 +2241,7 @@ function _M0FP310moonbitgis12supercluster3src24get__cluster__properties(data, i,
   const prop_index = _tmp$2 >>> 0 < data.length ? data[_tmp$2] : $oob();
   const _bind = [];
   const result = _M0MPB3Map3MapGsRPC14json4JsonE(new _M0TPB9ArrayViewGUsRPC14json4JsonEE(_bind, 0, 0), undefined);
-  if (prop_index >= 0 && prop_index < _M0MPC15array5Array6lengthGUddEE(cluster_props)) {
+  if (prop_index >= 0 && prop_index < _M0MPC15array5Array6lengthGRP310moonbitgis12supercluster3src7PolygonE(cluster_props)) {
     let m;
     _L: {
       _L$2: {
@@ -2055,6 +2283,37 @@ function _M0FP310moonbitgis12supercluster3src24get__cluster__properties(data, i,
   _M0MPB3Map3setGsRPC14json4JsonE(result, "point_count", _M0MPC14json4Json6number(count + 0, undefined));
   _M0MPB3Map3setGsRPC14json4JsonE(result, "point_count_abbreviated", abbrev);
   return _M0MPC14json4Json6object(result);
+}
+function _M0FP310moonbitgis12supercluster3src15gcj02__to__bd09(lng, lat) {
+  const z = Math.sqrt(lng * lng + lat * lat) + 2e-005 * _M0FPC14math3sin(lat * 52.359877559829883);
+  const theta = _M0FPC14math5atan2(lat, lng) + 3e-006 * _M0FPC14math3cos(lng * 52.359877559829883);
+  return { _0: z * _M0FPC14math3cos(theta) + 0.0065, _1: z * _M0FPC14math3sin(theta) + 0.006 };
+}
+function _M0FP310moonbitgis12supercluster3src15wgs84__to__bd09(lng, lat) {
+  let g_lng;
+  let g_lat;
+  _L: {
+    const _bind = _M0FP310moonbitgis12supercluster3src16wgs84__to__gcj02(lng, lat);
+    const _g_lng = _bind._0;
+    const _g_lat = _bind._1;
+    g_lng = _g_lng;
+    g_lat = _g_lat;
+    break _L;
+  }
+  return _M0FP310moonbitgis12supercluster3src15gcj02__to__bd09(g_lng, g_lat);
+}
+function _M0FP310moonbitgis12supercluster3src16wgs84__to__input(system, lng, lat) {
+  switch (system) {
+    case 0: {
+      return { _0: lng, _1: lat };
+    }
+    case 1: {
+      return _M0FP310moonbitgis12supercluster3src16wgs84__to__gcj02(lng, lat);
+    }
+    default: {
+      return _M0FP310moonbitgis12supercluster3src15wgs84__to__bd09(lng, lat);
+    }
+  }
 }
 function _M0FP310moonbitgis12supercluster3src6x__lng(x) {
   return (x - 0.5) * 360;
@@ -2110,12 +2369,22 @@ function _M0MP310moonbitgis12supercluster3src12Supercluster13feature__json(self,
       break _L;
     }
   }
-  return new _M0TP310moonbitgis12supercluster3src7Feature(id, properties, lng, lat, is_cluster, cluster_id, point_count);
+  let out_lng;
+  let out_lat;
+  _L$2: {
+    const _bind = _M0FP310moonbitgis12supercluster3src16wgs84__to__input(self.options.coord_system, lng, lat);
+    const _out_lng = _bind._0;
+    const _out_lat = _bind._1;
+    out_lng = _out_lng;
+    out_lat = _out_lat;
+    break _L$2;
+  }
+  return new _M0TP310moonbitgis12supercluster3src7Feature(id, properties, out_lng, out_lat, is_cluster, cluster_id, point_count);
 }
 function _M0MP310moonbitgis12supercluster3src12Supercluster11limit__zoom(self, z) {
   return _M0FP310moonbitgis12supercluster3src8int__max(self.options.min_zoom, _M0FP310moonbitgis12supercluster3src8int__min(z, self.options.max_zoom + 1 | 0));
 }
-function _M0MP310moonbitgis12supercluster3src12Supercluster13get__clusters(self, min_lng0, min_lat0, max_lng0, max_lat0, zoom) {
+function _M0MP310moonbitgis12supercluster3src12Supercluster19get__clusters__pred(self, min_lng0, min_lat0, max_lng0, max_lat0, zoom, pred) {
   const min_lng = new _M0TPB8MutLocalGdE(_M0IPC16double6DoublePB3Mod3mod(_M0IPC16double6DoublePB3Mod3mod(min_lng0 + 180, 360) + 360, 360) - 180);
   const min_lat = _M0FP310moonbitgis12supercluster3src11double__max(-90, _M0FP310moonbitgis12supercluster3src11double__min(90, min_lat0));
   const max_lng = new _M0TPB8MutLocalGdE(max_lng0 === 180 ? 180 : _M0IPC16double6DoublePB3Mod3mod(_M0IPC16double6DoublePB3Mod3mod(max_lng0 + 180, 360) + 360, 360) - 180);
@@ -2125,8 +2394,8 @@ function _M0MP310moonbitgis12supercluster3src12Supercluster13get__clusters(self,
     max_lng.val = 180;
   } else {
     if (min_lng.val > max_lng.val) {
-      const eastern_hem = _M0MP310moonbitgis12supercluster3src12Supercluster13get__clusters(self, min_lng.val, min_lat, 180, max_lat, zoom);
-      const western_hem = _M0MP310moonbitgis12supercluster3src12Supercluster13get__clusters(self, -180, min_lat, max_lng.val, max_lat, zoom);
+      const eastern_hem = _M0MP310moonbitgis12supercluster3src12Supercluster19get__clusters__pred(self, min_lng.val, min_lat, 180, max_lat, zoom, pred);
+      const western_hem = _M0MP310moonbitgis12supercluster3src12Supercluster19get__clusters__pred(self, -180, min_lat, max_lng.val, max_lat, zoom, pred);
       const _bind = western_hem.len;
       const _bind$2 = western_hem.buf;
       let _tmp = 0;
@@ -2156,7 +2425,10 @@ function _M0MP310moonbitgis12supercluster3src12Supercluster13get__clusters(self,
     const _ = _tmp$3;
     if (_ < _bind) {
       const id = _bind$2[_];
-      _M0MPC15array5Array4pushGRP310moonbitgis12supercluster3src7FeatureE(clusters, _M0MP310moonbitgis12supercluster3src12Supercluster13feature__json(self, tree.data, Math.imul(self.stride, id) | 0));
+      const k = Math.imul(self.stride, id) | 0;
+      if (pred(tree.data, k)) {
+        _M0MPC15array5Array4pushGRP310moonbitgis12supercluster3src7FeatureE(clusters, _M0MP310moonbitgis12supercluster3src12Supercluster13feature__json(self, tree.data, k));
+      }
       _tmp$3 = _ + 1 | 0;
       continue;
     } else {
@@ -2164,6 +2436,9 @@ function _M0MP310moonbitgis12supercluster3src12Supercluster13get__clusters(self,
     }
   }
   return clusters;
+}
+function _M0MP310moonbitgis12supercluster3src12Supercluster13get__clusters(self, min_lng0, min_lat0, max_lng0, max_lat0, zoom) {
+  return _M0MP310moonbitgis12supercluster3src12Supercluster19get__clusters__pred(self, min_lng0, min_lat0, max_lng0, max_lat0, zoom, (_data, _k) => true);
 }
 function _M0FP410moonbitgis12supercluster10web_2ddemo5mbapi11sc__version() {
   return "moonbitgis/supercluster 0.1.0 (MoonBit JS backend)";
@@ -2176,7 +2451,7 @@ function _M0FP410moonbitgis12supercluster10web_2ddemo5mbapi16sc__build__index(co
     const i = _tmp;
     if (i < count) {
       const city = _M0FP410moonbitgis12supercluster10web_2ddemo5mbapi14js__data__city(i);
-      const name = city >= 0 && city < _M0MPC15array5Array6lengthGUddEE(_M0FP410moonbitgis12supercluster10web_2ddemo5mbapi6cities) ? _M0MPC15array5Array2atGUddEE(_M0FP410moonbitgis12supercluster10web_2ddemo5mbapi6cities, city) : "未知";
+      const name = city >= 0 && city < _M0MPC15array5Array6lengthGRP310moonbitgis12supercluster3src7PolygonE(_M0FP410moonbitgis12supercluster10web_2ddemo5mbapi6cities) ? _M0MPC15array5Array2atGUddEE(_M0FP410moonbitgis12supercluster10web_2ddemo5mbapi6cities, city) : "未知";
       const _bind$2 = [];
       const props = _M0MPB3Map3MapGsRPC14json4JsonE(new _M0TPB9ArrayViewGUsRPC14json4JsonEE(_bind$2, 0, 0), undefined);
       _M0MPB3Map3setGsRPC14json4JsonE(props, "name", _M0MPC14json4Json6string(name));
@@ -2187,7 +2462,7 @@ function _M0FP410moonbitgis12supercluster10web_2ddemo5mbapi16sc__build__index(co
       break;
     }
   }
-  const index = _M0MP310moonbitgis12supercluster3src12Supercluster4load(_M0MP310moonbitgis12supercluster3src12Supercluster3new(_M0MP310moonbitgis12supercluster3src7Options3new(undefined, 16, 3, new _M0DTPC16option6OptionGdE4Some(60), _M0DTPC16option6OptionGdE4None__, undefined, -1, undefined, _M0DTPC16option6OptionGOWRPC14json4JsonRPC14json4JsonEuE4None__)), points);
+  const index = _M0MP310moonbitgis12supercluster3src12Supercluster4load(_M0MP310moonbitgis12supercluster3src12Supercluster3new(_M0MP310moonbitgis12supercluster3src7Options3new(undefined, 16, 3, new _M0DTPC16option6OptionGdE4Some(60), _M0DTPC16option6OptionGdE4None__, undefined, -1, undefined, _M0DTPC16option6OptionGOWRPC14json4JsonRPC14json4JsonEuE4None__, undefined, undefined)), points);
   _M0FP410moonbitgis12supercluster10web_2ddemo5mbapi10index__ref.val = index;
   return index.num_points;
 }

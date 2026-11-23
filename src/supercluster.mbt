@@ -32,6 +32,11 @@ pub struct Options {
   /// input coords are converted to WGS-84 before projection; query outputs
   /// are converted back so features overlay on a basemap of the same system.
   coord_system : CoordSystem
+  /// optional polygon regions (default empty = disabled). When non-empty,
+  /// every input point is anchored at load time to the first polygon
+  /// containing it (array index = region id), queryable via
+  /// `get_clusters_in_region`. The zoom-level hierarchy is unaffected.
+  regions : Array[Polygon]
 }
 
 /// Library defaults, identical to mapbox/supercluster:
@@ -47,6 +52,7 @@ pub fn Options::new(
   map~ : (Json) -> Json = identity_props,
   reduce~ : Option[((Json, Json) -> Unit)] = None,
   coord_system~ : CoordSystem = Wgs84,
+  regions~ : Array[Polygon] = [],
 ) -> Options {
   {
     min_zoom,
@@ -59,6 +65,7 @@ pub fn Options::new(
     map,
     reduce,
     coord_system,
+    regions,
   }
 }
 
@@ -152,6 +159,9 @@ pub struct Supercluster {
   mut coords : FixedArray[Double]
   /// per original point feature ids
   mut ids : FixedArray[Option[Json]]
+  /// per original point region id (-1 = outside all regions); only
+  /// meaningful when `options.regions` is non-empty
+  mut region_ids : FixedArray[Int]
 }
 
 const SCALE_F : Double = 1073741824.0 // 2^30
@@ -191,6 +201,7 @@ pub fn Supercluster::new(options : Options) -> Supercluster {
     props: [],
     coords: FixedArray::make(0, 0.0),
     ids: FixedArray::make(0, None),
+    region_ids: FixedArray::make(0, -1),
   }
 }
 
@@ -217,6 +228,8 @@ pub fn Supercluster::load(self : Supercluster, points : Array[InputPoint]) -> Su
   let props : Array[Json] = Array::make(num_points, Json::null())
   let coords : FixedArray[Double] = FixedArray::make(num_points * 2, 0.0)
   let ids : FixedArray[Option[Json]] = FixedArray::make(num_points, None)
+  let region_ids : FixedArray[Int] = FixedArray::make(num_points, -1)
+  let regions = opts.regions
   // generate a cluster record for each point and index them into a KD-tree
   let data : FixedArray[Int] = FixedArray::make(num_points * stride, 0)
   let mut w = 0
@@ -231,6 +244,17 @@ pub fn Supercluster::load(self : Supercluster, points : Array[InputPoint]) -> Su
     }
     for c in 0..<n {
       let (lng0, lat0) = p.coords[c]
+      // region anchoring happens in the input coordinate space
+      if regions.length() > 0 {
+        let mut r = -1
+        for ri, poly in regions {
+          if poly.contains(lng0, lat0) {
+            r = ri
+            break
+          }
+        }
+        region_ids[i] = r
+      }
       // convert to WGS-84 before projection (identity for Wgs84 input)
       let (lng, lat) = input_to_wgs84(opts.coord_system, lng0, lat0)
       let px = lng_x(lng)
@@ -255,6 +279,7 @@ pub fn Supercluster::load(self : Supercluster, points : Array[InputPoint]) -> Su
   self.props = props
   self.coords = coords
   self.ids = ids
+  self.region_ids = region_ids
   let mut prev = data
   let mut prev_num = i
   self.trees[opts.max_zoom + 1] = self.create_tree(prev, prev_num)
@@ -288,6 +313,20 @@ pub fn Supercluster::get_clusters(
   max_lat0 : Double,
   zoom : Int,
 ) -> Array[Feature] {
+  self.get_clusters_pred(min_lng0, min_lat0, max_lng0, max_lat0, zoom, fn(_data, _k) { true })
+}
+
+/// Internal variant of `get_clusters` with a per-item predicate over the
+/// raw tree slot; dateline recursion and the final feature loop both honor it.
+fn Supercluster::get_clusters_pred(
+  self : Supercluster,
+  min_lng0 : Double,
+  min_lat0 : Double,
+  max_lng0 : Double,
+  max_lat0 : Double,
+  zoom : Int,
+  pred : (FixedArray[Int], Int) -> Bool,
+) -> Array[Feature] {
   let mut min_lng = ((min_lng0 + 180.0) % 360.0 + 360.0) % 360.0 - 180.0
   let min_lat = double_max(-90.0, double_min(90.0, min_lat0))
   let mut max_lng = if max_lng0 == 180.0 {
@@ -301,8 +340,8 @@ pub fn Supercluster::get_clusters(
     max_lng = 180.0
   } else if min_lng > max_lng {
     // bbox crosses the international dateline: query both hemispheres
-    let eastern_hem = self.get_clusters(min_lng, min_lat, 180.0, max_lat, zoom)
-    let western_hem = self.get_clusters(-180.0, min_lat, max_lng, max_lat, zoom)
+    let eastern_hem = self.get_clusters_pred(min_lng, min_lat, 180.0, max_lat, zoom, pred)
+    let western_hem = self.get_clusters_pred(-180.0, min_lat, max_lng, max_lat, zoom, pred)
     for f in western_hem {
       eastern_hem.push(f)
     }
@@ -317,9 +356,47 @@ pub fn Supercluster::get_clusters(
   )
   let clusters : Array[Feature] = []
   for id in ids {
-    clusters.push(self.feature_json(tree.data, self.stride * id))
+    let k = self.stride * id
+    if pred(tree.data, k) {
+      clusters.push(self.feature_json(tree.data, k))
+    }
   }
   clusters
+}
+
+/// Query features belonging to polygon region `region_id` within a bbox at
+/// a zoom level. Clusters are included when their center (in the input
+/// coordinate system) falls inside the polygon; single points are matched
+/// via the region anchored at load time. Region ids are indices into
+/// `options.regions`. Raises if the region id is out of range.
+pub fn Supercluster::get_clusters_in_region(
+  self : Supercluster,
+  region_id : Int,
+  min_lng0 : Double,
+  min_lat0 : Double,
+  max_lng0 : Double,
+  max_lat0 : Double,
+  zoom : Int,
+) -> Array[Feature]!PolygonError {
+  let regions = self.options.regions
+  if region_id < 0 || region_id >= regions.length() {
+    raise PolygonError("No region with the specified id.")
+  }
+  let poly = regions[region_id]
+  let system = self.options.coord_system
+  let region_ids = self.region_ids
+  let pred : (FixedArray[Int], Int) -> Bool = fn(data, k) {
+    if data[k + OFFSET_NUM] > 1 {
+      // cluster: judge by center position, mapped back to input coords
+      let (lng, lat) = wgs84_to_input(system, x_lng(decode(data[k])), y_lat(decode(data[k + 1])))
+      poly.contains(lng, lat)
+    } else {
+      // point: matched by the region anchored at load time
+      let oi = data[k + OFFSET_ID]
+      oi < region_ids.length() && region_ids[oi] == region_id
+    }
+  }
+  self.get_clusters_pred(min_lng0, min_lat0, max_lng0, max_lat0, zoom, pred)
 }
 
 /// Get the children (immediate descendants) of a cluster.
