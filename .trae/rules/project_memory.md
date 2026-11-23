@@ -105,7 +105,7 @@ web-demo/                  浏览器在线演示（Leaflet + 广东六城 10 万
 
 **【立项】报名初立项阶段需先准备（当前全部就绪，只差填表单）：**
 
-1. ✅ 可运行代码仓库（gitee+GitHub 双仓库，需确认 GitHub 仓库为 public）
+1. ✅ 可运行代码仓库（gitee+GitHub 双仓库，GitHub 仓库已确认为 public：匿名访问仓库页与 API 均 200，2026-11-23）
 2. ✅ 项目简介文案（一句话+亮点，README 开头可直接复用：纯 MoonBit 移植 mapbox/supercluster 含 kdbush；26/26 对拍全绿；扁平整数数组；JS 后端可用，核心库 wasm/wasm-gc 测试通过）
 3. ✅ 可复现验证命令（`moon test --target js` / `moon run examples/demo --target js`）
 4. ✅ demo 运行演示（examples/demo 控制台版 + web-demo 在线地图版，web-demo 已含 GCJ-02 切换与六市区域筛选两个扩展功能演示）
