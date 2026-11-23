@@ -108,12 +108,12 @@ web-demo/                  浏览器在线演示（Leaflet + 广东六城 10 万
 1. ✅ 可运行代码仓库（gitee+GitHub 双仓库，需确认 GitHub 仓库为 public）
 2. ✅ 项目简介文案（一句话+亮点，README 开头可直接复用：纯 MoonBit 移植 mapbox/supercluster 含 kdbush；26/26 对拍全绿；扁平整数数组；JS 后端可用，核心库 wasm/wasm-gc 测试通过）
 3. ✅ 可复现验证命令（`moon test --target js` / `moon run examples/demo --target js`）
-4. ⚠️ demo 运行演示——立项只需基础版（examples/demo 控制台输出够用）
-5. ⚠️ 报名表基础字段（项目名/团队联系方式/仓库链接/立项编号）——待填
+4. ✅ demo 运行演示（examples/demo 控制台版 + web-demo 在线地图版，web-demo 已含 GCJ-02 切换与六市区域筛选两个扩展功能演示）
+5. ✅ 报名表基础字段（项目名/团队联系方式/仓库链接/立项编号）——**2026-11-22 已通过报名渠道提交，进入立项/初审阶段**
 
 **【评审】作品提交/评审阶段再补：**
 
-6. ⚠️ 对拍验证证据截图（`moon test` 输出 "Total tests: 17, passed: 17"，5 分钟可补）
+6. ⚠️ 对拍验证证据截图（`moon test` 输出 "Total tests: 26, passed: 26"，5 分钟可补）
 7. ❌ 演示视频（1–5 分钟：介绍→测试全绿→demo→地图效果；Win+G 或 OBS 录制）
 8. ❌ 效果截图/GIF（2–3 张：测试输出、demo 输出、地图渲染）
 9. ❌ mooncakes.io 发布（可选硬证据，需注册 moonbitgis 账号后 `moon publish`；注意与"未完成"口径的关系）
