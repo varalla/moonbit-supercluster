@@ -71,11 +71,14 @@ moonbit-supercluster/
 ├── .trae/rules/                Trae 项目记忆（随仓库同步）
 ├── src/
 │   ├── geo.mbt                 墨卡托投影 + JS 兼容数值函数（~55 行）
+│   ├── coord.mbt               坐标系输入：WGS-84/GCJ-02/BD-09 纠偏（§12.1）
+│   ├── polygon.mbt             多边形区域：PIP 射线法 + GeoJSON 解析（§12.2）
 │   ├── kdbush.mbt              静态 KD-tree（~320 行）
 │   ├── supercluster.mbt        聚类核心（~760 行）
 │   ├── geojson.mbt             GeoJSON 输入适配器（~100 行）
 │   ├── places_fixture_test.mbt 上游 places.json fixture（行字符串嵌入）
-│   └── supercluster_test.mbt   17 个测试（含对拍断言，~470 行）
+│   ├── supercluster_test.mbt   17 个对拍测试（期望值逐字取自上游）
+│   └── features_test.mbt       扩展功能测试：坐标对拍 + 区域锚定（9 个）
 ├── examples/demo/main.mbt      可运行示例：2000 合成点 + 聚类统计 + tile 查询
 └── web-demo/                   浏览器在线演示（纯静态站点，见 §7）
     ├── index.html / app.js     地图页：胶水函数、Leaflet 渲染、统计面板
@@ -326,11 +329,19 @@ const feats = JSON.parse(sc_clusters(w, s, e, n, zoom));
 
 ## 8. 测试与对拍策略
 
-17 个测试全部在 `moon test --target js` 下运行，核心方法是**对拍（parity testing）**：
+26 个测试全部在 `moon test --target js` 下运行，分两部分：
+
+**核心对拍（17 个）**，方法是**对拍（parity testing）**：
 
 - 期望值（簇 id、点数、tile 坐标、展开 zoom、children/leaves 内容）逐字取自上游 `test/test.js` 及其 `places.json` fixture（159 个点，嵌入 [places_fixture_test.mbt](../src/places_fixture_test.mbt)）；
 - tile 测试逐字节比对 `tags`（含 cluster/cluster_id/point_count/point_count_abbreviated）；
 - 覆盖边界：`generateId` 序列、null-property 要素、跨日期变更线 bbox、退化 bbox 计数（26/27/26/25/25/25/61）、同坐标点、MultiPoint、零输入、`map/reduce` 求和链路、`minPoints/radius/extent/maxZoom` 各选项。
+
+**扩展功能（9 个，[features_test.mbt](../src/features_test.mbt)）**：
+
+- 坐标转换对拍：wgs84↔gcj02、gcj02↔bd09、bd09→wgs84 各转换与独立 JS 实现（eviltransform 系公式）比对，容差 1e-9 度；境外点直通；
+- 多边形：带洞 PIP（甜甜圈奇偶规则）、GeoJSON FeatureCollection/MultiPolygon 解析、Point 几何拒绝；
+- 区域端到端：load 锚定 + `get_clusters_in_region` 簇中心判定、无效 region id 抛错、GCJ-02 输入 round-trip（输出还原到输入坐标系）。
 
 ## 9. 复杂度
 
@@ -355,7 +366,7 @@ const feats = JSON.parse(sc_clusters(w, s, e, n, zoom));
 ## 11. 开发者速查
 
 ```
-moon test --target js                 # 全量测试（17/17）
+moon test --target js                 # 全量测试（26/26：17 对拍 + 9 扩展）
 moon run examples/demo --target js    # 控制台示例
 moon build --target js web-demo/mbapi # 构建 web-demo 绑定产物
 node web-demo/tools/serve.js          # 在线演示（http://localhost:8787）
@@ -364,3 +375,74 @@ node web-demo/tools/serve.js          # 在线演示（http://localhost:8787）
 - 本机无 C 编译器，统一用 `--target js`；Wasm 后端理论上兼容（纯 MoonBit，无 FFI）。
 - 改聚类语义前先读 [5.2 槽布局](#52-扁平槽布局stride--6-或-7)与 [5.3 cluster_id 编码](#53-cluster_id-位打包)，测试期望值改动需回原版 JS 重新生成。
 - 更多环境注意事项见 [.trae/rules/project_memory.md](../.trae/rules/project_memory.md)。
+
+## 12. 扩展功能实现（2026-11-23）
+
+两个扩展均为**边界层功能**：核心聚类路径（[0,1] 墨卡托 Int32 索引、逐层聚类、
+查询算法）完全不动，默认关闭时行为与上游逐位一致（17 个对拍测试逐字未改）。
+
+### 12.1 坐标系输入：WGS-84 / GCJ-02 / BD-09（coord.mbt）
+
+**问题背景**：国内地图数据因法规加密——GCJ-02（火星坐标，高德/腾讯）对
+WGS-84 施加非线性扰动；BD-09（百度）在 GCJ-02 之上再加一层偏移。数据源
+与底图坐标系不一致时要素整体偏移 300–700 米。
+
+**设计：边界转换，不动索引核心**
+
+```
+输入(GCJ-02/BD-09) ──纠偏──► WGS-84 ──lng_x/lat_y──► [0,1] 墨卡托 ──encode──► Int32 索引
+                                                                     │
+输出 ◄──正变换(精确)── WGS-84 ◄──x_lng/y_lat── 内部墨卡托 ◄───────────┘
+```
+
+- `Options.coord_system`（默认 `Wgs84` = 不开启）。`load()` 在
+  `lng_x/lat_y` 投影**之前**调 `input_to_wgs84` 纠偏；
+  `feature_json` 输出前调 `wgs84_to_input` 还原回输入坐标系——保证
+  GCJ-02 数据 + GCJ-02 底图正确叠加。Wgs84 时两个函数均为恒等，热路径
+  零开销、输出逐位不变。
+- **正逆不对称**：WGS→GCJ 正变换是确定性公式（**精确**）；GCJ→WGS 无解析
+  逆解，采用不动点迭代 `w = w + gcj - wgs_to_gcj(w)`，**固定 2 次**，实测
+  round-trip 误差 ~3e-9 度（约 0.3 毫米，比 1 次迭代的 1–2 米改善三个数量级）。
+  BD-09→GCJ-02、GCJ-02→BD-09 均有精确公式；BD→WGS = 精确剥层 + 2 次迭代。
+- **境外直通**：`out_of_china` 判定（经纬度外包矩形）内的点不做任何转换
+  （扰动公式在境外无意义，上游惯例亦如此）。
+- **对拍**：转换公式与独立 JS 实现（eviltransform 系）比对，容差 1e-9 度
+  （广州/北京参考点 + 境外伦敦点），见 [features_test.mbt](../src/features_test.mbt)。
+- 导出 API：`wgs84_to_gcj02` / `gcj02_to_wgs84` / `gcj02_to_bd09` /
+  `bd09_to_gcj02` / `bd09_to_wgs84` / `wgs84_to_bd09`（pub，可独立使用）。
+
+### 12.2 多边形区域：load 时锚定 + 簇中心判定（polygon.mbt）
+
+**设计：多边形不进索引，PIP 是查询层**。KD-tree 的范围搜索天生矩形，
+多边形通过两种机制结合：
+
+1. **load 时锚定（预聚合）**：`Options.regions`（默认空数组 = 不开启）传入
+   GeoJSON Polygon/MultiPolygon/FeatureCollection 解析出的多边形数组，
+   数组下标即 region id。`load()` 对每个输入点做一次 point-in-polygon
+   （在**输入坐标系**空间判定），把首次命中的区域号写入平行数组
+   `region_ids[i]`（-1 = 全部区域之外）。缩放层级索引不受影响。
+2. **查询时簇中心判定**：`get_clusters_in_region(region_id, bbox, zoom)`
+   在 `get_clusters` 的 bbox 粗筛结果上过滤——**簇**把中心还原到输入坐标
+   系后做 PIP（簇中心落在多边形内即归入该区域，语义为近似：跨边界簇会
+   整体归入中心侧）；**单点**按 load 时锚定的 region id 精确匹配。语义
+   由用户在设计阶段确认：缩放后更精细的簇同样按簇中心判定。
+   无效 region id 抛 `PolygonError`。
+
+**实现细节**：
+
+- **PIP 算法**：even-odd 射线法（ray casting），逐环判定后奇偶翻转——
+  外环 + 洞环天然支持（甜甜圈中心落入洞内即排除）。单环 O(边数)，先比
+  `(yi > y) != (yj > y)` 再算交点横坐标，多数点两步淘汰。
+- **GeoJSON 解析**（`parse_polygons`）：接受 FeatureCollection / 特征数组 /
+  单个 Feature / 单个 geometry；Polygon 产出一个区域，MultiPolygon 每个
+  成员产出一个区域，按输入顺序编号。Point 等非法几何抛 `PolygonError`。
+- **查询管线**：bbox 粗筛走既有 `get_clusters_pred`（`get_clusters` 的
+  predicate 内部变体，日期线递归同样生效）→ 每要素 O(多边形边数) 精筛。
+  10 万点场景 bbox 命中数十至数百要素，精筛微秒级。
+- **性能取舍**：锚定发生在 load 时（每点一次 PIP，bbox 淘汰先行，10 万点
+  增量 < 10%），换取查询时零 PIP 的单点匹配；区域固定的行政区划统计场景
+  也可在数据生产阶段离线打标签，运行时增量归零。
+
+**复用与边界**：`Polygon` / `parse_polygons` 为独立 pub API；`region_ids`
+仅在 `regions` 非空时填充；两功能正交（GCJ-02 输入 + 区域可同时开启，
+锚定在输入坐标系空间、簇中心判定前先把 WGS-84 中心还原回输入坐标系）。

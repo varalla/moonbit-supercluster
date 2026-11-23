@@ -12,10 +12,11 @@
 
 ```
 moon test --target js
-# Total tests: 17, passed: 17, failed: 0.
+# Total tests: 26, passed: 26, failed: 0.
 ```
 
-> **状态**：🚧 开发中 —— 目前为可运行 demo（17/17 对拍测试通过），作品尚未完成。
+> **状态**：🚧 开发中 —— 目前为可运行 demo（26/26 测试通过，其中 17 个为
+> 与原版逐字对拍），作品尚未完成。
 
 ## 为什么快
 
@@ -156,7 +157,10 @@ const feats = JSON.parse(sc_clusters(w, s, e, n, zoom));   // zoom 取整数
 | `get_leaves(cluster_id, limit, offset)` | 簇下的全部原始点 |
 | `get_cluster_expansion_zoom(cluster_id)` | 该簇展开时的 zoom |
 | `get_tile(x, y, z)` | 单个 tile 的矢量瓦片式点要素 |
+| `get_clusters_in_region(region_id, bbox..., zoom)` | 区域查询：簇按中心、单点按锚定 id，见[多边形区域](#多边形区域) |
 | `parse_geojson_points(json)` | GeoJSON 适配器：FeatureCollection → `Array[InputPoint]` |
+| `parse_polygons(json)` | GeoJSON Polygon/MultiPolygon/FeatureCollection → `Array[Polygon]` |
+| `wgs84_to_gcj02` 等 6 个转换函数 | 坐标系互转，可独立调用，见[坐标系输入](#坐标系输入gcj-02--bd-09) |
 
 查询结果为 `Feature`，含 `lng`、`lat`、`is_cluster`、`cluster_id`、
 `point_count`、`properties`；tile 结果为 `TileFeature`，含像素坐标 `x`、
@@ -177,6 +181,8 @@ const feats = JSON.parse(sc_clusters(w, s, e, n, zoom));   // zoom 取整数
 | `generate_id` | `false` | 生成单调递增的簇 id |
 | `map` | 恒等 | 聚合前派生每点属性 |
 | `reduce` | `None` | `Some(fn(acc, props))` —— 将子节点属性聚合进簇 |
+| `coord_system` | `Wgs84` | 输入坐标系，见[坐标系输入](#坐标系输入gcj-02--bd-09) |
+| `regions` | `[]` | 多边形区域（空 = 关闭），见[多边形区域](#多边形区域) |
 
 属性聚合示例 —— `map` 从每个点中提取待聚合字段，`reduce` 将子节点累加进
 簇的运行总和：
@@ -217,6 +223,48 @@ let index = @sc.Supercluster::new(
 ).load(points)
 ```
 
+### 坐标系输入（GCJ-02 / BD-09）
+
+国内地图数据因法规加密：高德/腾讯用 GCJ-02（火星坐标），百度在其上再加
+一层偏移（BD-09），GPS 原始数据是 WGS-84。声明 `coord_system` 后，
+`load()` 在投影前自动纠偏，查询输出自动还原回输入坐标系——GCJ-02 数据
+配 GCJ-02 底图（高德）即可正确叠加：
+
+```moonbit
+let index = @sc.Supercluster::new(
+  @sc.Options::new(coord_system=@sc.Gcj02),   // 或 @sc.Bd09
+).load(points)                                 // points 为 GCJ-02 坐标
+// clusters 中的 lng/lat 仍是 GCJ-02，可直接画在高德底图上
+```
+
+原理：索引核心始终建立在 WGS-84 [0,1] 墨卡托上，转换只发生在
+输入/输出边界。GCJ→WGS 逆变换无解析解，采用不动点迭代（固定 2 次），
+round-trip 误差约 0.3 毫米；境外点自动直通不做转换。六个转换函数
+（`wgs84_to_gcj02` 等）也可独立调用。
+
+### 多边形区域
+
+`regions` 传入 GeoJSON Polygon / MultiPolygon / FeatureCollection（用
+`parse_polygons` 解析），数组下标即区域 id（0, 1, 2…）。`load()` 时每个点
+做一次 point-in-polygon 判定**锚定**到区域（层级索引行为完全不变）；查询时
+**簇按簇中心**判定归属、单点按锚定 id 精确匹配：
+
+```moonbit
+let regions = @sc.parse_polygons(geojson_string)   // FeatureCollection 等
+let index = @sc.Supercluster::new(
+  @sc.Options::new(regions=regions),
+).load(points)
+
+// 区域 0 内的簇/点（bbox + zoom 与 get_clusters 相同）
+let feats = try index.get_clusters_in_region(0, 113.0, 21.0, 116.0, 24.0, 6) catch {
+  PolygonError(msg) => { /* region id 越界 */ }
+}
+```
+
+带洞多边形受支持（even-odd 射线法，外环 + 洞环奇偶判定）。注意语义：
+簇是聚合体，**跨边界的簇按簇中心整体归入一侧**；缩放后更精细的簇同样按
+簇中心判定。两个选项可同时开启（如 GCJ-02 输入 + 行政区划锚定）。
+
 ### 错误处理
 
 可能失败的函数会抛出类型化错误，可用模式匹配处理：
@@ -227,6 +275,9 @@ let children = try index.get_children(164) catch {
 }
 let points = try @sc.parse_geojson_points(s) catch {
   GeoJSONError(msg) => { /* JSON 非法 / 几何类型不支持 ... */ }
+}
+let regions = try @sc.parse_polygons(fc) catch {
+  PolygonError(msg) => { /* 非法几何 / region id 越界 ... */ }
 }
 ```
 
@@ -243,13 +294,13 @@ let points = try @sc.parse_geojson_points(s) catch {
 
 ## 测试
 
-17 个测试，其中大部分是**与原版实现的对拍测试**：期望值（簇 id、点数、
-tile 坐标、展开 zoom）逐字取自上游 `test/test.js` 测试套件及其
-`places.json` fixture，嵌入于 `src/places_fixture_test.mbt`。
+26 个测试：17 个**与原版实现的对拍测试**（期望值逐字取自上游 `test/test.js`
+及其 `places.json` fixture，嵌入于 `src/places_fixture_test.mbt`）+ 9 个
+扩展功能测试（坐标转换对拍独立 JS 实现、带洞 PIP、区域锚定端到端）。
 
 ```
 moon test --target js
-# Total tests: 17, passed: 17, failed: 0.
+# Total tests: 26, passed: 26, failed: 0.
 ```
 
 ## 项目结构
@@ -257,11 +308,14 @@ moon test --target js
 ```
 src/
   geo.mbt                  墨卡托投影辅助函数（lngX/latY/xLng/yLat）
+  coord.mbt                坐标系输入：WGS-84/GCJ-02/BD-09 纠偏
+  polygon.mbt              多边形区域：PIP 射线法 + GeoJSON 解析
   kdbush.mbt               静态 KD-tree：扁平 Int 数组 + Floyd–Rivest 选择
   supercluster.mbt         核心：缩放层级、聚类、查询、tile 输出
   geojson.mbt              GeoJSON Point/MultiPoint 输入适配器
   places_fixture_test.mbt  嵌入的上游 fixture（对拍测试）
-  supercluster_test.mbt    17 个测试，含对拍断言
+  supercluster_test.mbt    17 个对拍测试
+  features_test.mbt        扩展功能测试（坐标对拍 + 区域锚定，9 个）
 examples/demo/             可运行控制台示例（2000 合成点）
 web-demo/                  浏览器在线演示：Leaflet 地图 + 10 万点聚合，
                            含 JS 后端编译产物（mbapi.js）

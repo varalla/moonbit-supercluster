@@ -13,10 +13,11 @@ Wasm backend, making it a natural fit for MoonBit-based WebGIS stacks.
 
 ```
 moon test --target js
-# Total tests: 17, passed: 17, failed: 0.
+# Total tests: 26, passed: 26, failed: 0.
 ```
 
-> **Status**: 🚧 in development — currently a runnable demo (17/17 parity tests pass), the work is not finished yet.
+> **Status**: 🚧 in development — currently a runnable demo (26/26 tests pass,
+> 17 of them verbatim parity tests against the upstream), the work is not finished yet.
 
 ## Why it's fast
 
@@ -169,7 +170,10 @@ const feats = JSON.parse(sc_clusters(w, s, e, n, zoom));   // integer zoom
 | `get_leaves(cluster_id, limit, offset)` | original points under a cluster |
 | `get_cluster_expansion_zoom(cluster_id)` | zoom at which the cluster expands |
 | `get_tile(x, y, z)` | vector-tile-style point features for one tile |
+| `get_clusters_in_region(region_id, bbox..., zoom)` | region query: clusters by center, points by anchored id, see [Polygon regions](#polygon-regions) |
 | `parse_geojson_points(json)` | GeoJSON adapter: FeatureCollection → `Array[InputPoint]` |
+| `parse_polygons(json)` | GeoJSON Polygon/MultiPolygon/FeatureCollection → `Array[Polygon]` |
+| `wgs84_to_gcj02` and 5 more | coordinate system conversions, see [Coordinate systems](#coordinate-systems-gcj-02--bd-09) |
 
 Query results are `Feature` values with `lng`, `lat`, `is_cluster`,
 `cluster_id`, `point_count` and `properties`; tile results are `TileFeature`
@@ -190,6 +194,8 @@ All options match the upstream defaults and semantics:
 | `generate_id` | `false` | generate monotonically increasing cluster ids |
 | `map` | identity | derive per-point properties before aggregation |
 | `reduce` | `None` | `Some(fn(acc, props))` — aggregate child properties into clusters |
+| `coord_system` | `Wgs84` | input coordinate system, see [Coordinate systems](#coordinate-systems-gcj-02--bd-09) |
+| `regions` | `[]` | polygon regions (empty = disabled), see [Polygon regions](#polygon-regions) |
 
 Example with property aggregation — `map` extracts the fields to aggregate
 from each point, `reduce` folds a child into the cluster's running sum:
@@ -230,6 +236,55 @@ let index = @sc.Supercluster::new(
 ).load(points)
 ```
 
+### Coordinate systems (GCJ-02 / BD-09)
+
+Chinese map data is legally encrypted: AMap/Tencent use GCJ-02 ("Mars
+coordinates", a nonlinear perturbation of WGS-84) and Baidu adds another
+offset layer (BD-09); raw GPS data is WGS-84. Declare `coord_system` and
+`load()` converts to WGS-84 before projection, while query outputs are
+converted back to the input system — so GCJ-02 data overlays correctly on a
+GCJ-02 basemap (e.g. AMap):
+
+```moonbit
+let index = @sc.Supercluster::new(
+  @sc.Options::new(coord_system=@sc.Gcj02),   // or @sc.Bd09
+).load(points)                                 // points are GCJ-02 coords
+// cluster lng/lat remain GCJ-02 — plot them directly on the AMap basemap
+```
+
+How it works: the index core always lives in WGS-84 [0,1] spherical Mercator;
+conversion only happens at the input/output boundary. GCJ→WGS has no analytic
+inverse, so a fixed-point iteration (2 rounds) is used — round-trip error is
+about 0.3 millimeters; points outside China pass through untouched. The six
+conversion functions (`wgs84_to_gcj02`, etc.) are public and usable standalone.
+
+### Polygon regions
+
+Pass GeoJSON Polygon / MultiPolygon / FeatureCollection via `parse_polygons`
+to `regions`; the array index is the region id (0, 1, 2…). At `load()` time
+every point is **anchored** to the first polygon containing it (one
+point-in-polygon test per point; the zoom hierarchy is untouched). At query
+time **clusters are judged by their center** and single points match their
+anchored id:
+
+```moonbit
+let regions = @sc.parse_polygons(geojson_string)   // FeatureCollection etc.
+let index = @sc.Supercluster::new(
+  @sc.Options::new(regions=regions),
+).load(points)
+
+// clusters/points inside region 0 (bbox + zoom same as get_clusters)
+let feats = try index.get_clusters_in_region(0, 113.0, 21.0, 116.0, 24.0, 6) catch {
+  PolygonError(msg) => { /* region id out of range */ }
+}
+```
+
+Polygons with holes are supported (even-odd ray casting over outer ring +
+holes). Semantics note: clusters are aggregates — a cluster **straddling a
+polygon boundary is attributed entirely to the side its center falls on**;
+finer clusters after zooming are judged the same way. Both options compose
+(e.g. GCJ-02 input + administrative-region anchoring).
+
 ### Error handling
 
 Fallible functions raise typed errors you can match on:
@@ -240,6 +295,9 @@ let children = try index.get_children(164) catch {
 }
 let points = try @sc.parse_geojson_points(s) catch {
   GeoJSONError(msg) => { /* invalid JSON / unsupported geometry ... */ }
+}
+let regions = try @sc.parse_polygons(fc) catch {
+  PolygonError(msg) => { /* invalid geometry / region id out of range ... */ }
 }
 ```
 
@@ -258,14 +316,15 @@ including its edge-case quirks:
 
 ## Tests
 
-17 tests, most of them **parity tests against the reference implementation**:
-expected values (cluster ids, point counts, tile coordinates, expansion zooms)
-are taken verbatim from the upstream `test/test.js` suite and its
-`places.json` fixture, embedded in `src/places_fixture_test.mbt`.
+26 tests: 17 **parity tests against the reference implementation** (expected
+values taken verbatim from the upstream `test/test.js` suite and its
+`places.json` fixture, embedded in `src/places_fixture_test.mbt`) plus 9
+extension tests (coordinate conversions parity-checked against an independent
+JS implementation, holed-polygon PIP, region anchoring end-to-end).
 
 ```
 moon test --target js
-# Total tests: 17, passed: 17, failed: 0.
+# Total tests: 26, passed: 26, failed: 0.
 ```
 
 ## Project layout
@@ -273,11 +332,14 @@ moon test --target js
 ```
 src/
   geo.mbt                  Mercator projection helpers (lngX/latY/xLng/yLat)
+  coord.mbt                Coordinate systems: WGS-84/GCJ-02/BD-09 conversion
+  polygon.mbt              Polygon regions: PIP ray casting + GeoJSON parsing
   kdbush.mbt               Static KD-tree: flat Int arrays + Floyd–Rivest select
   supercluster.mbt         Core: zoom hierarchy, clustering, queries, tiles
   geojson.mbt              GeoJSON Point/MultiPoint input adapter
   places_fixture_test.mbt  Embedded upstream fixtures (parity tests)
-  supercluster_test.mbt    17 tests incl. parity assertions
+  supercluster_test.mbt    17 parity tests
+  features_test.mbt        Extension tests (coord parity + regions, 9)
 examples/demo/             Runnable console demo (2000 synthetic points)
 web-demo/                  Browser demo: Leaflet map + 100k points,
                            JS-backend build artifact (mbapi.js)
