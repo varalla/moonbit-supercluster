@@ -73,6 +73,10 @@ moon test --target js
 moon add moonbitgis/supercluster
 ```
 
+> **备注**：本包尚未发布到 mooncakes.io 包仓库，上述命令需待正式发版后可用。
+> 当前阶段可通过克隆本仓库后以本地路径依赖（moon.mod 的 `deps` 配置）方式引入，
+> 或直接参考 [web-demo/mbapi](web-demo/mbapi/main.mbt) 的 JS 绑定用法。
+
 然后在包配置中引入：
 
 ```

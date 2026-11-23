@@ -89,6 +89,12 @@ per-zoom clustering algorithm, parity testing), see
 moon add moonbitgis/supercluster
 ```
 
+> **Note**: this package is not yet published to the mooncakes.io registry —
+> the command above will work once an official release is out. For now you can
+> clone this repo and reference it as a local path dependency (`deps` in
+> moon.mod), or follow the JS binding usage in
+> [web-demo/mbapi](web-demo/mbapi/main.mbt).
+
 Then import it in your package config:
 
 ```
