@@ -24,8 +24,8 @@ const layer = L.layerGroup().addTo(map);
 const BUCKETS = [
   { max: 10, r: 14, bg: '#85FABF', fg: '#004D26' },
   { max: 50, r: 18, bg: '#0FDC78', fg: '#004D26' },
-  { max: 200, r: 22, bg: '#05994F', fg: '#FFFFFF' },
-  { max: Infinity, r: 28, bg: '#02743B', fg: '#FFFFFF' },
+  { max: 200, r: 22, bg: '#f5e503ff', fg: '#FFFFFF' },
+  { max: Infinity, r: 28, bg: '#f80000ff', fg: '#FFFFFF' },
 ];
 function bucket(count) {
   for (const b of BUCKETS) if (count < b.max) return b;
