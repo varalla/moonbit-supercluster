@@ -28,6 +28,10 @@ pub struct Options {
   map : (Json) -> Json
   /// a reduce function for calculating custom cluster properties
   reduce : Option[((Json, Json) -> Unit)]
+  /// input coordinate system (default Wgs84 = no conversion). On `load`,
+  /// input coords are converted to WGS-84 before projection; query outputs
+  /// are converted back so features overlay on a basemap of the same system.
+  coord_system : CoordSystem
 }
 
 /// Library defaults, identical to mapbox/supercluster:
@@ -42,6 +46,7 @@ pub fn Options::new(
   generate_id~ : Bool = false,
   map~ : (Json) -> Json = identity_props,
   reduce~ : Option[((Json, Json) -> Unit)] = None,
+  coord_system~ : CoordSystem = Wgs84,
 ) -> Options {
   {
     min_zoom,
@@ -53,6 +58,7 @@ pub fn Options::new(
     generate_id,
     map,
     reduce,
+    coord_system,
   }
 }
 
@@ -224,7 +230,9 @@ pub fn Supercluster::load(self : Supercluster, points : Array[InputPoint]) -> Su
       continue
     }
     for c in 0..<n {
-      let (lng, lat) = p.coords[c]
+      let (lng0, lat0) = p.coords[c]
+      // convert to WGS-84 before projection (identity for Wgs84 input)
+      let (lng, lat) = input_to_wgs84(opts.coord_system, lng0, lat0)
       let px = lng_x(lng)
       let py = lat_y(lat)
       coords[2 * i] = px
@@ -651,7 +659,9 @@ fn Supercluster::feature_json(self : Supercluster, data : FixedArray[Int], k : I
     let props = self.props[i]
     (props, x_lng(self.coords[2 * i]), y_lat(self.coords[2 * i + 1]), 0, 1)
   }
-  { id, properties, lng, lat, is_cluster, cluster_id, point_count }
+  // outputs live in the input coordinate system (identity for Wgs84)
+  let (out_lng, out_lat) = wgs84_to_input(self.options.coord_system, lng, lat)
+  { id, properties, lng: out_lng, lat: out_lat, is_cluster, cluster_id, point_count }
 }
 
 /// apply the user-provided map function to point/cluster properties
