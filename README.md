@@ -14,11 +14,16 @@ while business requirements often call for drill-down views by
 administrative divisions — city → district/county → subdistrict →
 community. Upstream supercluster solves the "fast" part: high-performance
 clustering of huge point sets. On top of the pure-MoonBit port, this
-project adds two capabilities targeting these pain points: **coordinate
-system input** (GCJ-02 / BD-09) resolves the offset between domestic
-encrypted data and the basemap, and **polygon regions** anchor every point
-to its administrative division at `load()` time, enabling direct filtered
-queries at city/district granularity. See
+project adds two capabilities targeting these pain points. **Coordinate
+system input** (GCJ-02 / BD-09): real-world data sources are messy —
+commercial map services such as Fengtu Map and AMap output GCJ-02 or BD-09
+coordinates, while government agencies typically work in internal
+non-standard systems and convert to WGS-84 only for external exchange;
+this feature was added to stay compatible with such common business
+coordinate systems and to resolve the offset between encrypted data and
+the basemap. **Polygon regions** anchor every point to its administrative
+division at `load()` time, enabling direct filtered queries at
+city/district granularity. See
 [Coordinate systems](#coordinate-systems-gcj-02--bd-09) and
 [Polygon regions](#polygon-regions).
 
