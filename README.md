@@ -120,24 +120,66 @@ Open <http://localhost:8787> in a browser — the page must be served over HTTP
 How it works:
 
 - [`web-demo/mbapi/main.mbt`](web-demo/mbapi/main.mbt) wraps the library and
-  exposes three functions to JavaScript via the MoonBit `link.js.exports`
+  exposes five functions to JavaScript via the MoonBit `link.js.exports`
   mechanism: `sc_version`, `sc_build_index` (assembles `InputPoint`s from
-  JS-provided data and runs `load()`) and `sc_clusters` (bbox query returning
-  a compact JSON string).
+  JS-provided data and runs `load()`, with a coordinate-system parameter),
+  `sc_clusters` (bbox query returning a compact JSON string),
+  `sc_set_regions` (parses city-boundary GeoJSON into polygon regions) and
+  `sc_clusters_in_region` (region-filtered query).
 - Data crosses the boundary as a flat `Float64Array` (`[lng, lat, cityIdx] ×
   n`) plus three accessor glue functions (`__SC_LNG` / `__SC_LAT` /
   `__SC_CITY`) that MoonBit reads via `extern "js"` — avoiding the cost of
   pushing 100k points through a JSON parser.
+- [`data/gd_cities.json`](web-demo/data/gd_cities.json) holds the six-city
+  administrative boundaries (DataV GeoJSON, GCJ-02, aligned with the AMap
+  basemap); **the feature array index is the region id**.
 - [`app.js`](web-demo/app.js) renders clusters as size/color-graded circle
   markers (upstream supercluster style buckets) and single points as small
-  circle markers, with a live stats panel: index build time, per-viewport
-  feature counts (clusters vs. points), biggest cluster and query latency.
+  circle markers, with a live stats panel: index build time, current
+  coordinate system, region filter, per-viewport feature counts (clusters
+  vs. points), biggest cluster and query latency. The page includes two
+  demo controls for the extended features (see below).
 - [`web-demo/mbapi.js`](web-demo/mbapi.js) is the committed MoonBit build
   artifact. After changing `main.mbt`, rebuild with
   `moon build --target js web-demo/mbapi` and copy
   `target/js/release/build/web-demo/mbapi/mbapi.js` over it.
 
-JS-side calling quick reference (three steps):
+### Demo walkthrough (extended-feature examples)
+
+Two controls sit in the top-right panel, one per library extension:
+
+**① Coordinate-system toggle (GCJ-02 input demo)**
+
+1. Starts in WGS-84 mode: raw data goes straight into the index, so markers
+   sit ~500m off the AMap basemap (GCJ-02);
+2. Click the "切换 GCJ-02 数据" (switch to GCJ-02) button: JS converts the
+   WGS-84 data to GCJ-02 (simulating a domestic data source) and rebuilds
+   the whole index with `coord_system = Gcj02` — MoonBit converts back to
+   WGS-84 internally for clustering and restores GCJ-02 on output, so
+   markers align exactly with the basemap;
+3. The "当前坐标系" (current coord system) row switches to GCJ-02 and the
+   button label flips; toggle back and forth to compare the offset.
+
+**② Administrative-region query (polygon region demo)**
+
+1. On page load the demo feeds `gd_cities.json` to `sc_set_regions`; the
+   six city boundaries overlay the map as dashed blue lines (feature index
+   = region id: 0 Guangzhou / 1 Shenzhen / 2 Zhuhai / 3 Foshan /
+   4 Dongguan / 5 Zhongshan);
+2. Pick a city from the "全部区域" (all regions) dropdown: queries switch
+   to `sc_clusters_in_region(region_id, …)` — **clusters are judged by
+   center** (a cluster belongs to the region if its center falls inside,
+   same rule after zooming) while single points match the region anchored
+   at load time; the "区域筛选" (region filter) row shows the city name
+   and the visible feature count drops;
+3. The selected city's boundary is highlighted in solid orange; switch
+   back to "全部区域" to restore full queries.
+4. The two demos compose: in GCJ-02 mode the raw GCJ boundaries are fed
+   as-is; in WGS-84 mode they are converted GCJ→WGS in JS first, keeping
+   PIP judgment consistent in both modes.
+
+JS-side calling quick reference (three steps + optional region/coord-system
+extensions):
 
 ```js
 // 1) Register the glue accessors BEFORE the dynamic import — order matters:
@@ -149,14 +191,23 @@ globalThis.__SC_CITY = i => globalThis.__SC_DATA[i * 3 + 2]; // property index
 const { sc_version, sc_build_index, sc_clusters } =
   await import('./mbapi.js');                      // ES module, no bundler needed
 
-// 2) Feed data and build the index (once; __SC_DATA is a flat [lng, lat,
-//    cityIdx] Float64Array; 100k points fully pre-built in ~0.4s)
+// 2) (Optional) set polygon regions: GeoJSON text → region array (array
+//    index = region id); must run before sc_build_index
+sc_set_regions(citiesGeojsonText);
+
+// 3) Feed data and build the index (once; __SC_DATA is a flat [lng, lat,
+//    cityIdx] Float64Array; 100k points fully pre-built in ~0.4s;
+//    2nd arg: 0 = WGS-84, 1 = GCJ-02)
 sc_build_index(pts.length);
 
-// 3) Viewport query (on every map move; returns a compact JSON string)
+// 4) Viewport query (on every map move; returns a compact JSON string)
 const feats = JSON.parse(sc_clusters(w, s, e, n, zoom));   // integer zoom
 // cluster:    { lng, lat, cluster: true,  id, count }
 // single point: { lng, lat, cluster: false, name: "Guangzhou" }
+
+// 5) (Optional) region-filtered query: clusters by center, points by the
+//    region anchored at load time
+const rfeats = JSON.parse(sc_clusters_in_region(0, w, s, e, n, zoom)); // 0=Guangzhou
 ```
 
 ## API

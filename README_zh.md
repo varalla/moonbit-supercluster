@@ -111,20 +111,54 @@ node tools/serve.js        # 在 http://localhost:8787 提供服务
 工作方式：
 
 - [`web-demo/mbapi/main.mbt`](web-demo/mbapi/main.mbt) 包装本库，通过
-  MoonBit `link.js.exports` 机制向 JS 暴露三个函数：`sc_version`、
-  `sc_build_index`（用 JS 侧提供的数据组装 `InputPoint` 并执行 `load()`）
-  与 `sc_clusters`（bbox 查询，返回紧凑 JSON 字符串）。
+  MoonBit `link.js.exports` 机制向 JS 暴露五个函数：`sc_version`、
+  `sc_build_index`（用 JS 侧提供的数据组装 `InputPoint` 并执行 `load()`，
+  第二参数选坐标系）、`sc_clusters`（bbox 查询，返回紧凑 JSON 字符串）、
+  `sc_set_regions`（解析城市边界 GeoJSON 作为多边形区域）与
+  `sc_clusters_in_region`（区域过滤查询）。
 - 数据以扁平 `Float64Array`（`[lng, lat, cityIdx] × n`）跨越边界，配合三个
   访问器胶水函数（`__SC_LNG` / `__SC_LAT` / `__SC_CITY`）由 MoonBit 侧
   `extern "js"` 逐点读取——避免把 10 万点塞进 JSON 解析器的开销。
+- [`data/gd_cities.json`](web-demo/data/gd_cities.json) 是六市行政区划边界
+  （DataV GeoJSON，GCJ-02 坐标系，与高德底图对齐），**feature 数组下标即
+  region id**。
 - [`app.js`](web-demo/app.js) 把簇渲染为分档着色/分级的圆形标记（原版
   supercluster 风格），单点渲染为小圆点，并实时显示统计面板：索引构建
-  耗时、视野内要素数（簇/单点）、最大簇与最近查询耗时。
+  耗时、当前坐标系、区域筛选、视野内要素数（簇/单点）、最大簇与最近查询
+  耗时。页面含两个扩展功能演示控件（见下）。
 - [`web-demo/mbapi.js`](web-demo/mbapi.js) 是入库的 MoonBit 编译产物；
   改动 `main.mbt` 后用 `moon build --target js web-demo/mbapi` 重新构建，
   并将 `target/js/release/build/web-demo/mbapi/mbapi.js` 覆盖过来。
 
-JS 侧调用速查（三步）：
+### 页面演示操作（扩展功能示例）
+
+页面右上角面板内有两个控件，对应库的两个扩展功能：
+
+**① 坐标系切换（GCJ-02 输入演示）**
+
+1. 初始为 WGS-84 模式：原始数据直接建索引，点位相对高德底图（GCJ-02）
+   有约 500m 的系统性偏移；
+2. 点击「切换 GCJ-02 数据」按钮：JS 侧把 WGS-84 数据正变换为 GCJ-02
+   （模拟国内数据源），再以 `coord_system = Gcj02` **重建整个索引**——
+   MoonBit 内部纠偏回 WGS-84 聚类，输出时还原 GCJ-02，点位与高德底图
+   完全对齐；
+3. 观察「当前坐标系」行变为「GCJ-02（已纠偏）」，按钮文字变为
+   「切回 WGS-84 数据」，可来回切换对比偏移效果。
+
+**② 行政区划区域查询（多边形区域演示）**
+
+1. 页面加载时自动把 `gd_cities.json` 喂给 `sc_set_regions`，六个市的
+   边界以蓝色虚线叠加在底图上（feature 下标即 region id：0 广州 /
+   1 深圳 / 2 珠海 / 3 佛山 / 4 东莞 / 5 中山）；
+2. 在「全部区域」下拉中选任一城市：查询改走
+   `sc_clusters_in_region(region_id, …)`——**簇按中心判定**（中心落在
+   市界内即整簇归入，缩放后同规则），单点按 load 时锚定的 region id
+   精确匹配；「区域筛选」行显示城市名，视野要素数明显下降；
+3. 选中城市的边界以橙色实线高亮；切回「全部区域」恢复全量查询。
+4. 两个演示可叠加：GCJ-02 模式下喂原始 GCJ 边界，WGS-84 模式下边界先
+   在 JS 侧 GCJ→WGS 还原再喂给索引，保证两种模式下 PIP 判定一致。
+
+JS 侧调用速查（三步 + 可选的区域/坐标系扩展）：
 
 ```js
 // 1) 先注册胶水访问器，再动态 import —— 顺序不能反：
@@ -136,14 +170,21 @@ globalThis.__SC_CITY = i => globalThis.__SC_DATA[i * 3 + 2]; // 属性索引
 const { sc_version, sc_build_index, sc_clusters } =
   await import('./mbapi.js');                      // ES Module，无需打包器
 
-// 2) 喂数据并建索引（一次性；__SC_DATA 为 [lng, lat, cityIdx] 平铺
-//    Float64Array；10 万点全量预建约 0.4s）
+// 2) （可选）设置多边形区域：GeoJSON 字符串 → 区域数组（数组下标即
+//    region id），须在 sc_build_index 之前调用
+sc_set_regions(citiesGeojsonText);
+
+// 3) 喂数据并建索引（一次性；__SC_DATA 为 [lng, lat, cityIdx] 平铺
+//    Float64Array；10 万点全量预建约 0.4s；第二参数 0=WGS-84，1=GCJ-02）
 sc_build_index(pts.length);
 
-// 3) 视口查询（每次地图移动按需调用；返回紧凑 JSON 字符串）
+// 4) 视口查询（每次地图移动按需调用；返回紧凑 JSON 字符串）
 const feats = JSON.parse(sc_clusters(w, s, e, n, zoom));   // zoom 取整数
 // 簇:   { lng, lat, cluster: true,  id, count }
 // 单点: { lng, lat, cluster: false, name: "广州" }
+
+// 5)（可选）区域过滤查询：簇按中心、单点按 load 时锚定的 region id
+const rfeats = JSON.parse(sc_clusters_in_region(0, w, s, e, n, zoom)); // 0=广州
 ```
 
 ## API

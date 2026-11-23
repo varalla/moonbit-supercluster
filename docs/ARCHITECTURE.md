@@ -243,8 +243,10 @@ globalThis.__SC_LNG / __SC_LAT / __SC_CITY    （JS 侧逐点访问器）
       ▼
 ┌──────────────────────────────────────────┐
 │ web-demo/mbapi/main.mbt                  │
-│  sc_build_index(n)  组装 InputPoint → load() │
+│  sc_set_regions(geojson) 解析城市边界 → 区域数组 │
+│  sc_build_index(n, coord_sys) 组装 InputPoint → load() │
 │  sc_clusters(bbox, zoom)  get_clusters → JSON 字符串 │
+│  sc_clusters_in_region(id, bbox, zoom)   区域过滤查询 │
 │  （moon.pkg: link.js.exports 导出表）     │
 └──────────────────────────────────────────┘
       │ 返回紧凑 JSON 字符串
@@ -256,9 +258,9 @@ app.js：Leaflet 分档渲染（簇 divIcon / 单点 circleMarker）+ 统计面�
 
 - **导出机制**：[mbapi/moon.pkg](../web-demo/mbapi/moon.pkg) 用
   `link: { "js": { "exports": [...] } }` 把 `sc_version / sc_build_index /
-  sc_clusters` 挂到产物模块的 ES 导出表上，`app.js` 通过
-  `await import('./mbapi.js')` 拿到（见产物 [mbapi.js](../web-demo/mbapi.js)
-  末尾的 `export {...}`）。
+  sc_clusters / sc_set_regions / sc_clusters_in_region` 挂到产物模块的
+  ES 导出表上，`app.js` 通过 `await import('./mbapi.js')` 拿到（见产物
+  [mbapi.js](../web-demo/mbapi.js) 末尾的 `export {...}`）。
 - **胶水函数必须先于动态 import 设置**：MoonBit 产物在**模块加载时**就捕获
   `globalThis.__SC_*` 胶水函数引用（mbapi.js 顶部的三个 `const` 赋值），
   内部再惰性解引用 `__SC_DATA`——因此 app.js 先注册胶水再 `import`，
@@ -283,8 +285,18 @@ app.js：Leaflet 分档渲染（簇 divIcon / 单点 circleMarker）+ 统计面�
 - 簇标记按 `count` 分四档（<10 / <50 / <200 / 其余）配尺寸与配色，对齐
   原版 supercluster 的分档风格；≥10000 显示为 "Nk" 缩写。
 - 统计面板实时显示：绑定版本（`sc_version`，兼作 JS 绑定冒烟测试）、
-  点位总数、索引构建耗时（含数据下载与 `load()`）、当前 zoom、视野要素数
-  （簇/单点拆分）、最大簇、最近一次查询耗时。
+  点位总数、索引构建耗时（含数据下载与 `load()`）、**当前坐标系**
+  （WGS-84 / GCJ-02）、**区域筛选**（全部区域 / 选中城市）、当前 zoom、
+  视野要素数（簇/单点拆分）、最大簇、最近一次查询耗时。
+- **扩展功能演示控件**（右上角面板内，见 §12）：
+  - 「切换 GCJ-02 数据」按钮：JS 侧把 WGS-84 数据正变换为 GCJ-02（模拟
+    国内数据源），以 `coord_system = Gcj02` 重建索引——输出还原 GCJ-02
+    与高德底图对齐；WGS-84 模式下可见 ~500m 底图偏移。
+  - 「全部区域」下拉：六市行政区划（`data/gd_cities.json`，DataV GeoJSON，
+    GCJ-02，feature 下标即 region id）以蓝色虚线叠加；选市后查询改走
+    `sc_clusters_in_region`（簇按中心判定、单点按锚定 id），选中边界
+    橙色高亮。坐标系/区域两个演示可叠加：WGS-84 模式下边界先在 JS 侧
+    GCJ→WGS 还原再喂给索引，保证两模式 PIP 判定一致。
 
 ### 7.4 数据生成与运行
 
@@ -292,12 +304,17 @@ app.js：Leaflet 分档渲染（簇 divIcon / 单点 circleMarker）+ 统计面�
   高斯扰动生成 10 万点（广州 2.8 万 / 深圳 2.4 万 / 东莞 1.4 万 /
   佛山 1.3 万 / 中山 1.1 万 / 珠海 1 万），写入 `data/gd_points.json`
   （模拟接口返回的本地数据）。
+- [`data/gd_cities.json`](../web-demo/data/gd_cities.json)：六市行政区划
+  边界（DataV 合并 FeatureCollection，GCJ-02 与高德瓦片对齐），顺序为
+  广州/深圳/珠海/佛山/东莞/中山，properties 含 `name`/`adcode`。
 - [`tools/serve.js`](../web-demo/tools/serve.js)：极简静态服务器，默认
   8787 端口。必须经 HTTP 访问而非 `file://`（fetch + ES module 限制）。
 
 ### 7.5 JS 调用速查
 
-应用侧接入本库 JS 产物的完整调用序列（与 §7.2 绑定要点一一对应）：
+应用侧接入本库 JS 产物的完整调用序列（与 §7.2 绑定要点一一对应）。
+每个函数的**输入参数、返回值与错误行为的逐项说明**（以 web-demo/app.js
+真实用法为例）见 [JS_BINDING_API.md](JS_BINDING_API.md)：
 
 ```js
 // 1) 注册胶水访问器 —— 必须先于动态 import（产物加载时捕获引用）
@@ -305,27 +322,42 @@ globalThis.__SC_DATA = null;
 globalThis.__SC_LNG  = i => globalThis.__SC_DATA[i * 3];
 globalThis.__SC_LAT  = i => globalThis.__SC_DATA[i * 3 + 1];
 globalThis.__SC_CITY = i => globalThis.__SC_DATA[i * 3 + 2];
-const { sc_version, sc_build_index, sc_clusters } =
+const { sc_version, sc_build_index, sc_clusters,
+        sc_set_regions, sc_clusters_in_region } =
   await import('./mbapi.js');
 
-// 2) 喂数据并建索引（一次性）：__SC_DATA 填为 [lng, lat, cityIdx] 平铺
-//    Float64Array 后调用，返回索引点数
-sc_build_index(pts.length);
+// 2)（可选）设置多边形区域：GeoJSON 字符串 → 区域数组，数组下标即
+//    region id；失败（非法 GeoJSON）返回 -1。须在 sc_build_index 之前调用
+sc_set_regions(citiesGeojsonText);
 
-// 3) 视口查询（按需）：bbox 四至 + 整数 zoom，返回 JSON 字符串
+// 3) 喂数据并建索引（一次性）：__SC_DATA 填为 [lng, lat, cityIdx] 平铺
+//    Float64Array 后调用；coord_sys 0 = WGS-84（默认），1 = GCJ-02 输入
+//    （内部纠偏回 WGS-84 聚类，输出还原 GCJ-02）。返回索引点数
+sc_build_index(pts.length, 0);
+
+// 4) 视口查询（按需）：bbox 四至 + 整数 zoom，返回 JSON 字符串
 const feats = JSON.parse(sc_clusters(w, s, e, n, zoom));
 // 簇:   { lng, lat, cluster: true,  id, count }
 // 单点: { lng, lat, cluster: false, name: "广州" }
+
+// 5)（可选）区域过滤查询：簇按中心判定（还原到输入坐标系后 PIP），
+//    单点按 load 时锚定的 region id；无效 id 返回 "[]"
+const rfeats = JSON.parse(sc_clusters_in_region(0, w, s, e, n, zoom)); // 0=广州
 ```
 
 导出函数签名（MoonBit 侧，见
 [mbapi/main.mbt](../web-demo/mbapi/main.mbt)）：
 
 - `sc_version() -> String` —— 版本串，兼作绑定冒烟测试
-- `sc_build_index(count : Int) -> Int` —— 逐点读取数据、组装
-  `InputPoint`、`load()` 全量预建，返回索引点数
+- `sc_set_regions(geojson : String) -> Int` —— 解析城市边界 GeoJSON 为
+  多边形区域，返回区域数（-1 = 解析失败）
+- `sc_build_index(count : Int, coord_sys : Int) -> Int` —— 逐点读取数据、
+  组装 `InputPoint`、`load()` 全量预建（`coord_sys`: 0 = Wgs84、
+  1 = Gcj02），返回索引点数
 - `sc_clusters(min_lng, min_lat, max_lng, max_lat : Double, zoom : Int)
   -> String` —— bbox 视口查询，手写 StringBuilder 序列化为紧凑 JSON
+- `sc_clusters_in_region(region_id : Int, min_lng, ..., zoom) -> String`
+  —— 区域过滤查询，失败/无效 id 返回 `"[]"`
 
 ## 8. 测试与对拍策略
 
