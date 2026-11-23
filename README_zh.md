@@ -123,6 +123,28 @@ node tools/serve.js        # 在 http://localhost:8787 提供服务
   改动 `main.mbt` 后用 `moon build --target js web-demo/mbapi` 重新构建，
   并将 `target/js/release/build/web-demo/mbapi/mbapi.js` 覆盖过来。
 
+JS 侧调用速查（三步）：
+
+```js
+// 1) 先注册胶水访问器，再动态 import —— 顺序不能反：
+//    MoonBit 产物在模块加载时捕获 globalThis.__SC_* 引用
+globalThis.__SC_DATA = null;                       // 数据槽，稍后填充
+globalThis.__SC_LNG  = i => globalThis.__SC_DATA[i * 3];     // 经度
+globalThis.__SC_LAT  = i => globalThis.__SC_DATA[i * 3 + 1]; // 纬度
+globalThis.__SC_CITY = i => globalThis.__SC_DATA[i * 3 + 2]; // 属性索引
+const { sc_version, sc_build_index, sc_clusters } =
+  await import('./mbapi.js');                      // ES Module，无需打包器
+
+// 2) 喂数据并建索引（一次性；__SC_DATA 为 [lng, lat, cityIdx] 平铺
+//    Float64Array；10 万点全量预建约 0.4s）
+sc_build_index(pts.length);
+
+// 3) 视口查询（每次地图移动按需调用；返回紧凑 JSON 字符串）
+const feats = JSON.parse(sc_clusters(w, s, e, n, zoom));   // zoom 取整数
+// 簇:   { lng, lat, cluster: true,  id, count }
+// 单点: { lng, lat, cluster: false, name: "广州" }
+```
+
 ## API
 
 | API | 说明 |

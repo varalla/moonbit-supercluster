@@ -292,6 +292,38 @@ app.js：Leaflet 分档渲染（簇 divIcon / 单点 circleMarker）+ 统计面�
 - [`tools/serve.js`](../web-demo/tools/serve.js)：极简静态服务器，默认
   8787 端口。必须经 HTTP 访问而非 `file://`（fetch + ES module 限制）。
 
+### 7.5 JS 调用速查
+
+应用侧接入本库 JS 产物的完整调用序列（与 §7.2 绑定要点一一对应）：
+
+```js
+// 1) 注册胶水访问器 —— 必须先于动态 import（产物加载时捕获引用）
+globalThis.__SC_DATA = null;
+globalThis.__SC_LNG  = i => globalThis.__SC_DATA[i * 3];
+globalThis.__SC_LAT  = i => globalThis.__SC_DATA[i * 3 + 1];
+globalThis.__SC_CITY = i => globalThis.__SC_DATA[i * 3 + 2];
+const { sc_version, sc_build_index, sc_clusters } =
+  await import('./mbapi.js');
+
+// 2) 喂数据并建索引（一次性）：__SC_DATA 填为 [lng, lat, cityIdx] 平铺
+//    Float64Array 后调用，返回索引点数
+sc_build_index(pts.length);
+
+// 3) 视口查询（按需）：bbox 四至 + 整数 zoom，返回 JSON 字符串
+const feats = JSON.parse(sc_clusters(w, s, e, n, zoom));
+// 簇:   { lng, lat, cluster: true,  id, count }
+// 单点: { lng, lat, cluster: false, name: "广州" }
+```
+
+导出函数签名（MoonBit 侧，见
+[mbapi/main.mbt](../web-demo/mbapi/main.mbt)）：
+
+- `sc_version() -> String` —— 版本串，兼作绑定冒烟测试
+- `sc_build_index(count : Int) -> Int` —— 逐点读取数据、组装
+  `InputPoint`、`load()` 全量预建，返回索引点数
+- `sc_clusters(min_lng, min_lat, max_lng, max_lat : Double, zoom : Int)
+  -> String` —— bbox 视口查询，手写 StringBuilder 序列化为紧凑 JSON
+
 ## 8. 测试与对拍策略
 
 17 个测试全部在 `moon test --target js` 下运行，核心方法是**对拍（parity testing）**：

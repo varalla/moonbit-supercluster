@@ -136,6 +136,28 @@ How it works:
   `moon build --target js web-demo/mbapi` and copy
   `target/js/release/build/web-demo/mbapi/mbapi.js` over it.
 
+JS-side calling quick reference (three steps):
+
+```js
+// 1) Register the glue accessors BEFORE the dynamic import — order matters:
+//    the MoonBit artifact captures the globalThis.__SC_* references at load time
+globalThis.__SC_DATA = null;                       // data slot, filled later
+globalThis.__SC_LNG  = i => globalThis.__SC_DATA[i * 3];     // longitude
+globalThis.__SC_LAT  = i => globalThis.__SC_DATA[i * 3 + 1]; // latitude
+globalThis.__SC_CITY = i => globalThis.__SC_DATA[i * 3 + 2]; // property index
+const { sc_version, sc_build_index, sc_clusters } =
+  await import('./mbapi.js');                      // ES module, no bundler needed
+
+// 2) Feed data and build the index (once; __SC_DATA is a flat [lng, lat,
+//    cityIdx] Float64Array; 100k points fully pre-built in ~0.4s)
+sc_build_index(pts.length);
+
+// 3) Viewport query (on every map move; returns a compact JSON string)
+const feats = JSON.parse(sc_clusters(w, s, e, n, zoom));   // integer zoom
+// cluster:    { lng, lat, cluster: true,  id, count }
+// single point: { lng, lat, cluster: false, name: "Guangzhou" }
+```
+
 ## API
 
 | API | Description |
