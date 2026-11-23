@@ -185,7 +185,12 @@ async function boot() {
   sel.onchange = () => { state.region = parseInt(sel.value, 10); highlightRegion(); renderStats(); redraw(); };
 
   state.version = sc_version();
+  const btn = document.getElementById('btn-coord');
+  btn.disabled = true;
+  btn.textContent = '正在构建索引…';
   await buildIndex('wgs84');
+  btn.disabled = false;
+  btn.textContent = '切换 GCJ-02 数据';
   bar.style.width = '100%';
   document.getElementById('loading').style.display = 'none';
   redraw();
@@ -198,7 +203,7 @@ function highlightRegion() {
     const selected = citiesGcj.features[state.region].properties.name;
     polygonLayer.eachLayer(l => {
       if (l.feature.properties.name === selected) {
-        l.setStyle({ color: '#F97316', weight: 2.5, fillOpacity: 0.12, dashArray: null });
+        l.setStyle({ color: '#0FDC78', weight: 3, fillOpacity: 0.25, dashArray: null });
       }
     });
   }
@@ -254,6 +259,7 @@ document.getElementById('btn-coord').onclick = async () => {
   const next = state.coordMode === 'wgs84' ? 'gcj02' : 'wgs84';
   const btn = document.getElementById('btn-coord');
   btn.disabled = true;
+  btn.textContent = '正在切换数据并重建索引…';
   await buildIndex(next);
   btn.disabled = false;
   btn.textContent = next === 'wgs84' ? '切换 GCJ-02 数据' : '切回 WGS-84 数据';
