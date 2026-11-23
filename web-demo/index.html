@@ -20,6 +20,13 @@
   #panel td:first-child { color: #666; padding-right: 10px; white-space: nowrap; }
   #panel td:last-child { font-weight: 600; font-variant-numeric: tabular-nums; }
   .cluster-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+  #controls { margin: 10px 0 4px; display: flex; gap: 8px; }
+  #controls button, #controls select {
+    font-size: 12px; padding: 5px 8px; border: 1px solid #d0d0d0; border-radius: 8px;
+    background: #fafafa; cursor: pointer; flex: 1; min-width: 0;
+  }
+  #controls button { white-space: nowrap; }
+  #controls button:disabled { opacity: .55; cursor: wait; }
   #loading {
     position: absolute; inset: 0; z-index: 2000; background: rgba(255,255,255,.92);
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -42,6 +49,10 @@
   <h1>MoonBit supercluster 聚合演示</h1>
   <div class="sub">广东省六城合成数据 · 纯 MoonBit JS 后端</div>
   <table id="stats"></table>
+  <div id="controls">
+    <button id="btn-coord">切换 GCJ-02 数据</button>
+    <select id="sel-city"></select>
+  </div>
 </div>
 <div id="loading">
   <div>正在加载 10 万点数据并构建索引…</div>

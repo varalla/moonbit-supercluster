@@ -1,8 +1,19 @@
 import {
   "moonbitgis/supercluster/src" @sc,
+  "moonbitlang/core/json" @json,
 }
 
 options(
   "is-main": true,
-  link: { "js": { "exports": [ "sc_version", "sc_build_index", "sc_clusters" ] } },
+  link: {
+    "js": {
+      "exports": [
+        "sc_version",
+        "sc_build_index",
+        "sc_clusters",
+        "sc_set_regions",
+        "sc_clusters_in_region",
+      ],
+    },
+  },
 )
